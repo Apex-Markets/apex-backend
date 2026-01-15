@@ -1,0 +1,41 @@
+mutation CreateUser($displayName: String!, $email: String) @auth(level: USER) {
+  user_insert(data: { displayName: $displayName, email: $email })
+}
+
+query GetWorkout($id: UUID!) @auth(level: USER) {
+  workout(id: $id) {
+    id
+    workoutDate
+    durationMinutes
+    notes
+    workoutExercises_on_workout {
+      id
+      exercise {
+        name
+        muscleGroup
+        equipment
+      }
+      sets_on_workoutExercise {
+        id
+        reps
+        weight
+        rpe
+        setNumber
+      }
+    }
+  }
+}
+
+mutation CreateWorkout($workoutDate: Date!, $durationMinutes: Int, $notes: String) @auth(level: USER) {
+  workout_insert(data: { userId_expr: "auth.uid", workoutDate: $workoutDate, durationMinutes: $durationMinutes, notes: $notes })
+}
+
+query ListExercises @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  exercises {
+    id
+    name
+    description
+    muscleGroup
+    equipment
+  }
+}

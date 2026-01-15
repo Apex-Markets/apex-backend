@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Account Settings</title>
+</head>
+<body>
+    <h1>Welcome, User!</h1>
+    <p>Your login is secure, but you can make it easier using Face ID or Fingerprint.</p>
+
+    <button type="button" id="enrollPasskeyBtn">Create Passkey / Face ID</button>
+    <div id="message"></div>
+
+    <script type="module">
+        // Import all necessary Firebase modules, including initializeApp and getAuth
+
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            enrollPasskey // <--- NEW: Function for creating the Passkey
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Your web app's Firebase configuration (same as login page)
+        const firebaseConfig = { /* ... */ };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        const enrollBtn = document.getElementById('enrollPasskeyBtn');
+        const msgDiv = document.getElementById('message');
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                // If not logged in, redirect them back to the login page
+                window.location.href = '/sign-in'; 
+            }
+        });
+
+        enrollBtn.addEventListener('click', async () => {
+            const user = auth.currentUser;
+            if (!user) {
+                msgDiv.textContent = "Please log in first.";
+                return;
+            }
+
+            try {
+                // This triggers the OS prompt to register the device's biometric/PIN
+                await enrollPasskey(user); 
+                msgDiv.textContent = "✅ Passkey successfully created! You can now log in passwordless.";
+                msgDiv.style.color = 'green';
+            } catch (error) {
+                console.error("Enrollment failed:", error);
+                msgDiv.textContent = "❌ Enrollment failed: " + error.message;
+                msgDiv.style.color = 'red';
+            }
+        });
+    </script>
+</body>
+</html>

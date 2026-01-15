@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
     try {
       data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
       return res.status(500).json({ error: 'SnapTrade returned non-JSON response', raw });
     }
 

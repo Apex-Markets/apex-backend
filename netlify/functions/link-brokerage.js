@@ -34,7 +34,8 @@ export default async function handler(req, res) {
 
     try {
       data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
+      // no error variable here to avoid 'err' is defined but never used lint error
       return res.status(500).json({ error: 'SnapTrade returned non-JSON response', raw });
     }
 

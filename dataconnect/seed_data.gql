@@ -1,0 +1,37 @@
+mutation CreateSeedData @transaction @auth(level: PUBLIC, insecureReason: "This mutation is used to populate the database with seed data and is safe to expose to the public") {
+  exercise_insertMany(data: [
+    {
+      name: "Bench Press",
+      description: "A compound exercise that involves pressing weight upwards while lying on a bench.",
+      muscleGroup: "Chest",
+      equipment: "Barbell and Bench",
+      createdAt: "2024-04-26T12:00:00Z"
+    },
+    {
+      name: "Squat",
+      description: "A full body exercise where you lower your hips from a standing position and then stand back up.",
+      muscleGroup: "Legs",
+      equipment: "Barbell",
+      createdAt: "2024-04-26T12:00:00Z"
+    },
+    {
+      name: "Deadlift",
+      description: "A full body exercise where you lift a loaded barbell or dumbbells off the floor to hip level.",
+      muscleGroup: "Back",
+      equipment: "Barbell",
+      createdAt: "2024-04-26T12:00:00Z"
+    }
+  ])
+  user_insertMany(data: [
+    {
+      displayName: "Demo User 1",
+      email: "demouser1@example.com",
+      createdAt: "2024-04-26T12:00:00Z"
+    },
+    {
+      displayName: "Demo User 2",
+      email: "demouser2@example.com",
+      createdAt: "2024-04-26T12:00:00Z"
+    }
+  ])
+}

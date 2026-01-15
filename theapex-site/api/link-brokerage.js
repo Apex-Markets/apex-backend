@@ -28,7 +28,8 @@ export default async function handler(req, res) {
     let data;
     try {
       data = JSON.parse(raw);
-    } catch (err) {
+    } catch {
+      // no error param here — fixes ESLint no-unused-vars error
       return res.status(500).json({ error: 'SnapTrade returned non-JSON response', raw });
     }
 

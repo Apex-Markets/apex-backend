@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Log In | The Apex</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            background-color: #000 !important;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Stronger, visible radial animation (S style) */
+        .animated-bg::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 200%;
+            background-image: repeating-radial-gradient(circle, rgba(0, 255, 153, 0.15) 2px, transparent 10px);
+            animation: spin 30s linear infinite;
+            z-index: 0;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg) translate(-25%, -25%);
+            }
+            to {
+                transform: rotate(360deg) translate(-25%, -25%);
+            }
+        }
+
+        .login-container {
+            position: relative;
+            z-index: 1;
+            max-width: 420px;
+            padding: 48px 36px;
+            border-radius: 18px;
+            background-color: rgba(18, 18, 18, 0.94);
+            box-shadow: 0 0 40px rgba(0, 255, 140, 0.1);
+        }
+
+        .login-container h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: #f6f6f6;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 22px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #aaa;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            background-color: #1b1b1b;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 15px;
+        }
+
+        .input-group input:focus {
+            border-color: #00ff99;
+            outline: none;
+            background-color: #1f1f1f;
+        }
+
+        .checkbox {
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: #888;
+        }
+
+        .checkbox input {
+            margin-right: 6px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 16px;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.25s ease;
+        }
+
+        .btn-primary {
+            background-color: #00ff99;
+            color: #000;
+            border: none;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary:hover {
+            background-color: #00e68a;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid #555;
+            color: #ccc;
+            margin-bottom: 12px;
+        }
+
+        .btn-secondary:hover {
+            background-color: #1f1f1f;
+        }
+
+        .btn-passkey {
+            background-color: transparent;
+            border: 1px solid #555;
+            color: #aaa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-passkey:hover {
+            background-color: #1a1a1a;
+            color: #fff;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: #777;
+            margin-top: 32px;
+        }
+
+        .footer a {
+            color: #00ff99;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Message box for success/error */
+        .message-box {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+
+        .message-box.success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .message-box.error {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        /* Loading spinner */
+        .loading-spinner {
+            display: none;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #00ff99;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin-loader 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin-loader {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* --- Password Toggle CSS --- */
+        /* Apply necessary padding to the input to make space for the icon */
+        .input-group input { 
+            /* ... (existing styles) ... */
+            padding-right: 40px; 
+        }
+
+        /* Container for relative positioning */
+        .password-group {
+            position: relative;
+        }
+
+        /* Icon positioning */
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #00ff99;
+            font-size: 18px;
+            z-index: 10;
+        }
+        /* --------------------------- */
+
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+
+    <div class="login-container">
+        <h2>Log in to The Apex</h2>
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" required />
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <div class="password-group">
+                    <input type="password" id="password" required />
+                    <i class="fas fa-eye password-toggle" id="togglePassword"></i>
+                </div>
+            </div>
+            <div class="checkbox">
+                <input type="checkbox" id="keepLoggedIn" checked /> 
+                <label for="keepLoggedIn">Keep me logged in</label>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="loginBtn">Log In</button>
+            <button type="button" class="btn btn-secondary">Help</button>
+            <button type="button" class="btn btn-passkey"><i class="fas fa-key"></i> Log in with passkeys</button>
+        </form>
+
+        <div class="loading-spinner" id="loadingSpinner"></div>
+        <div class="message-box" id="messageBox"></div>
+
+        <div class="footer">
+            <p>Not on The Apex? <a href="https://www.theapexinvestor.com/sign-up.html">Create an account</a></p>
+            <p>Protected by security systems and the Google <a href="#">Privacy Policy</a>. Terms apply.</p>
+        </div>
+    </div>
+
+    <script type="module">
+import { 
+    initializeApp 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, 
+    signInWithCustomToken, 
+    setPersistence, 
+    browserSessionPersistence, 
+    browserLocalPersistence,
+    connectAuthEmulator 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    getFunctions, 
+    httpsCallable,
+    connectFunctionsEmulator
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAdIUF9wklnnSfIAeGlA3aw8UVCj0H0Vig",
+  authDomain: "the-apex-app.firebaseapp.com",
+  projectId: "the-apex-app",
+  storageBucket: "the-apex-app.firebasestorage.app",
+  messagingSenderId: "908808650183",
+  appId: "1:908808650183:web:8112f608dd48c8140e6de2"
+};
+
+// 1️⃣ Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// 2️⃣ Initialize services
+const auth = getAuth(app);
+const functions = getFunctions(app); // Omit the region argument
+// 3️⃣ Connect emulators (***FIX IS HERE: CONDITIONAL CHECK***)
+if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+    console.log("Connecting to Firebase Emulators...");
+    // Use the ports from your firebase.json file
+    connectAuthEmulator(auth, "http://127.0.0.1:9100"); // Note: Using your latest firebase.json port 9100, not 9099
+    connectFunctionsEmulator(functions, "127.0.0.1", 5004); // Note: Using your latest firebase.json port 5004, not 5003
+} else {
+    // Ensure the client code connects to the correct live region if needed,
+    // though 'us-central1' is set above.
+    console.log("Connecting to Production Services...");
+}
+
+
+// Create the callable function reference
+const loginApexUser = httpsCallable(functions, 'loginApexUser'); 
+
+
+const loginForm = document.getElementById('loginForm');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('loginBtn');
+const messageBox = document.getElementById('messageBox');
+const loadingSpinner = document.getElementById('loadingSpinner');
+const keepLoggedInCheckbox = document.getElementById('keepLoggedIn');
+const togglePassword = document.getElementById('togglePassword');
+
+function showMessage(msg, type) {
+  messageBox.textContent = msg;
+  messageBox.className = `message-box ${type}`;
+  messageBox.style.display = 'block';
+}
+
+function hideMessage() {
+  messageBox.style.display = 'none';
+  messageBox.textContent = '';
+  messageBox.className = 'message-box';
+}
+
+// --- Password Toggle Logic ---
+togglePassword.addEventListener("click", () => {
+    // Toggle the type attribute between 'password' and 'text'
+    const type = passwordInput.getAttribute("type") === "password" ? "text" : "password";
+    passwordInput.setAttribute("type", type);
+
+    // Toggle the icon class for visual feedback (fa-eye <-> fa-eye-slash)
+    togglePassword.classList.toggle("fa-eye");
+    togglePassword.classList.toggle("fa-eye-slash");
+});
+// -----------------------------
+
+
+loginForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  hideMessage();
+  loginBtn.disabled = true;
+  loadingSpinner.style.display = 'block';
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+
+console.log("Email:", email, "Password:", password);
+
+
+  if (!email || !password) {
+    showMessage("Please enter both email and password.", "error");
+    loginBtn.disabled = false;
+    loadingSpinner.style.display = 'none';
+    return;
+  }
+  
+  // Set persistence BEFORE trying to sign in
+  const persistenceType = keepLoggedInCheckbox.checked
+      ? browserLocalPersistence    // Persist session across browser restarts
+      : browserSessionPersistence; // Session lasts only until browser is closed
+
+  try {
+    // 1. Set the desired session persistence
+    await setPersistence(auth, persistenceType);
+
+    // 2. Call the Cloud Function to get the Custom Token
+console.log("Calling loginApexUser with:", { email, password });
+const result = await loginApexUser({ email, password });
+console.log("Result from backend:", result);
+
+
+    // 3. Sign in using the Custom Token
+    const customToken = result.data.customToken;
+    await signInWithCustomToken(auth, customToken);
+
+    showMessage("Login successful! Redirecting...", "success");
+    setTimeout(() => {
+      window.location.href = 'https://www.theapexinvestor.com/apex-tool';
+    }, 1500);
+
+ } catch (err) {
+    console.error('Login error:', err);
+    loginBtn.disabled = false;
+    loadingSpinner.style.display = 'none';
+    
+    let userMessage = "Login failed. Please check your credentials and try again.";
+
+    // Enhanced error message handling for Firebase Functions
+    if (err.code && err.code.startsWith('functions/')) {
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes('unauthenticated') || errMsg.includes('wrong password') || errMsg.includes('user not found')) {
+             userMessage = "Incorrect email or password. Please try again or reset your password.";
+        } else {
+             userMessage = "A server error occurred. Please try again later.";
+        }
+    } else if (err instanceof Error) {
+        userMessage = err.message;
+    }
+    
+    showMessage(userMessage, "error");
+  }
+});
+</script>
+
+</body>
+</html>

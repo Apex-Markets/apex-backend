@@ -1,6 +1,7 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/oauth/callback/schwab", "destination": "/api/oauth-callback-schwab" },
     { "source": "/sign-in", "destination": "/sign-in.html" },
     { "source": "/sign-up", "destination": "/sign-up.html" },
     { "source": "/apex-tool", "destination": "/apex-tool.html" },
