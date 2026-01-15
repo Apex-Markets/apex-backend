@@ -1,10 +1,16 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
+// Serve static files from theapex-site folder (like images, CSS, favicon, etc.)
+app.use(express.static(path.join(__dirname, 'theapex-site')));
+
+// Serve the actual homepage HTML file
 app.get('/', (req, res) => {
-  res.send('API is running! Welcome to apex-backend! Try /oauth/callback/schwab');
+  res.sendFile(path.join(__dirname, 'theapex-site/index.html'));
 });
 
+// [Your other existing route]
 app.get('/oauth/callback/schwab', (req, res) => {
   const code = req.query.code;
   console.log("Schwab Callback HIT!", code);
@@ -12,8 +18,6 @@ app.get('/oauth/callback/schwab', (req, res) => {
   if (!code) {
     return res.status(400).send('Missing code parameter from Schwab.');
   }
-
-  // Place your token exchange logic here later...
 
   res.send('Schwab account linked! You may now return to the app.');
 });
