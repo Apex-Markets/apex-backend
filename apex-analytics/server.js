@@ -1,3 +1,4 @@
+console.log('REALLY RUNNING NEW CORS CODE', new Date().toISOString());
 console.log('LOADED FROM:', __filename, 'at', new Date().toISOString());
 
 const express = require('express');
