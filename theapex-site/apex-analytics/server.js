@@ -28,14 +28,17 @@ app.get('/', (req, res) => {
   const userId = req.cookies.user_id || Math.random().toString(36).substring(2, 12);
   const sessionId = req.cookies.session_id || Math.random().toString(36).substring(2, 14);
 
-  // Set cookies to browser
+  // Dynamically set cookie domain for prod/dev
+  const isProd = process.env.NODE_ENV === 'production';
+  const cookieDomain = isProd ? '.theapexinvestor.com' : undefined;
+
   res.cookie('user_id', userId, {
     maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: false,
     sameSite: 'Lax',
     path: '/',
     secure: true,
-    domain: '.theapexinvestor.com'
+    domain: cookieDomain
   });
   res.cookie('session_id', sessionId, {
     maxAge: 2 * 60 * 60 * 1000,
@@ -43,11 +46,12 @@ app.get('/', (req, res) => {
     sameSite: 'Lax',
     path: '/',
     secure: true,
-    domain: '.theapexinvestor.com'
+    domain: cookieDomain
   });
 
   console.log('Set cookies: user_id =', userId, ', session_id =', sessionId);
-  res.send('Hello from server! (cookies set)');
+  // Also return as JSON for frontend JS access on first load
+  res.json({ message: 'Hello from server! (cookies set)', user_id: userId, session_id: sessionId });
 });
 
 app.post('/api/track', async (req, res) => {
