@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>APEX Investor — Quantum Terminal</title>
+  <meta name="description" content="An innovative, investor-first platform for reading the market, placing orders, and generating AI insights — all in one elegant console." />
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { inter: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI'] },
+          colors: {
+            base: '#0b0f14',
+            panel: '#0f172a',
+            ink: '#e5e7eb',
+            edge: '#1f2937',
+            cyan: '#00f2fe',
+            blue: '#3b82f6',
+            emerald: '#10b981',
+            rose: '#ef4444',
+            amber: '#f59e0b',
+          },
+          boxShadow: {
+            glow: '0 0 0 1px rgba(0,242,254,0.25), 0 8px 30px rgba(0,0,0,0.35)'
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- Icons + Charts -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    #rangeBar .range { flex: 0 0 auto; }
+    /* === Welcome overlay helpers === */
+#welcomeOverlay .panel { transform: translateY(6px); opacity:.0; transition: all .35s ease; }
+#welcomeOverlay.show .panel { transform: translateY(0); opacity:1; }
+
+
+    html, body { height: 100%; }
+    body { font-family: Inter, ui-sans-serif, system-ui; background: radial-gradient(900px 600px at 10% -20%, rgba(0,242,254,.08), transparent), radial-gradient(900px 600px at 110% 10%, rgba(59,130,246,.06), transparent), #0b0f14; color: #e5e7eb; }
+    .glass { background: rgba(17, 24, 39, 0.72); backdrop-filter: blur(10px); border: 1px solid rgba(148,163,184,.15); }
+    .pill { border: 1px solid #1f2937; }
+    .knum { font-variant-numeric: tabular-nums; }
+    .grd { background: linear-gradient(135deg, rgba(0,242,254,.25), rgba(59,130,246,.15)); }
+    .panel { border: 1px solid #1f2937; }
+    .hover-card:hover { box-shadow: 0 0 0 1px rgba(0,242,254,.25), 0 12px 40px rgba(0,0,0,.45); transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(90deg, #10b981, #3b82f6); }
+    .btn-primary:disabled { opacity:.6; cursor:not-allowed; }
+    .scroll-slim::-webkit-scrollbar{height:8px;width:8px}.scroll-slim::-webkit-scrollbar-thumb{background:#1f2937;border-radius:6px}
+    .pulse { animation: pulse1 1s ease-out 2; }
+    @keyframes pulse1 { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.7)} 100%{box-shadow:0 0 0 16px rgba(16,185,129,0)} }
+    .news-card:hover { background: rgba(255,255,255,0.04); }
+    .range-active { border-color: rgba(0,242,254,.45); background: rgba(0,242,254,.06); }
+  </style>
+  <script>
+    // SnapTrade Cloud config (from your reference)
+    window.API_BASE = "https://snaptrade-api-da44.onrender.com"; // must support CORS for fetch in browser
+    window.USERID_KEY = "snaptradeUserId";
+
+    // ===== FMP config — uses your key =====
+    window.FMP_KEY  = "6uFHicw1PX5heQjTn6N2JlCRE73K1kV8";
+    window.FMP_BASE = "https://financialmodelingprep.com/api";
+  </script>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Topbar -->
+  <header class="sticky top-0 z-50 glass">
+    <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+  <div class="h-7 w-7 rounded bg-gradient-to-br from-cyan/80 to-blue/70 flex items-center justify-center text-base font-bold text-base/90">A</div>
+  <span class="text-sm font-semibold tracking-wide shrink-0">APEX Investor</span>
+  <div class="flex items-center gap-2 ml-6 flex-1 min-w-0">
+    <div class="relative w-full">
+      <input
+        id="globalSearch"
+        class="h-9 w-full sm:w-64 md:w-80 rounded-lg bg-panel pill px-3 text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan/40"
+        placeholder="Search tickers, ETFs, crypto…"
+        autocomplete="off"
+      />
+      <div id="searchDrop" class="absolute mt-1 w-full sm:w-[24rem] md:w-[28rem] hidden rounded-lg glass panel shadow-glow scroll-slim max-h-80 overflow-auto"></div>
+    </div>
+  </div>
+</div>
+      <div class="flex items-center gap-6 text-right">
+        <div>
+          <p class="text-[10px] text-slate-400">Total Value</p>
+          <p id="kpiTotal" class="knum font-semibold">$—</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-slate-400">Day Δ</p>
+          <p id="kpiDay" class="knum">—</p>
+        </div>
+        <div class="hidden sm:block">
+          <p class="text-[10px] text-slate-400">Cash</p>
+          <p id="kpiCash" class="knum">$—</p>
+        </div>
+        <div class="hidden sm:block">
+  <p class="text-[10px] text-slate-400">Buying Power</p>
+  <p id="kpiBuyingPower" class="knum">$—</p>
+</div>
+
+        
+        <button id="themeBtn" title="Toggle theme" class="h-8 w-8 rounded-full bg-panel pill flex items-center justify-center"><i data-lucide="moon" class="w-4 h-4"></i></button>
+        <button id="linkBtn" class="h-8 px-3 rounded-full bg-panel pill text-xs"><span id="linkBtnTxt">Link Broker</span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 max-w-7xl mx-auto w-full px-4 py-4 grid grid-cols-12 gap-4">
+    <!-- Sidebar / Nav -->
+    <aside class="hidden lg:flex col-span-2 flex-col gap-2">
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#dashboard">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i><span class="text-sm">Dashboard</span>
+      </a>
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#goals">
+        <i data-lucide="target" class="w-4 h-4"></i><span class="text-sm">Goals & PMI</span>
+      </a>
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#portfolio">
+        <i data-lucide="pie-chart" class="w-4 h-4"></i><span class="text-sm">Portfolio</span>
+      </a>
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#orders">
+        <i data-lucide="ticket" class="w-4 h-4"></i><span class="text-sm">Orders</span>
+      </a>
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#insights">
+        <i data-lucide="sparkles" class="w-4 h-4"></i><span class="text-sm">AI Insights</span>
+      </a>
+      <a class="glass panel rounded-xl py-3 px-3 hover-card flex items-center gap-3" href="#settings">
+        <i data-lucide="settings" class="w-4 h-4"></i><span class="text-sm">Settings</span>
+      </a>
+      <div class="mt-4 text-[11px] text-slate-400">Secure & encrypted • v2</div>
+    </aside>
+
+    <!-- Main grid -->
+    <main class="col-span-12 lg:col-span-10 grid grid-cols-12 gap-4">
+      <!-- Hero KPI Row -->
+      <section class="col-span-12 grid grid-cols-12 gap-4" id="dashboard">
+        <div class="col-span-12 xl:col-span-8 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+<h2 class="text-sm font-semibold tracking-wide text-slate-300">
+  Markets Overview — <span class="font-bold" id="moLabel">S&amp;P 500</span>
+  <span id="moPrice" class="knum text-slate-300"></span>
+</h2>
+              <div id="moChange" class="text-[11px] mt-0.5"></div>
+            </div>
+ <div class="flex gap-2 flex-nowrap overflow-x-auto whitespace-nowrap justify-end scroll-slim" id="rangeBar">
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="1D">1D</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="1M">1M</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="3M">3M</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="6M">6M</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="YTD">YTD</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="1Y">1Y</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="2Y">2Y</button>
+              <button class="text-xs px-2.5 py-1 rounded-lg bg-panel pill range" data-range="5Y">5Y</button>
+            </div>
+          </div>
+          <div class="h-64 md:h-80 mt-2"><canvas id="priceChart"></canvas></div>
+
+          <!-- Goal Impact Card (PMI) -->
+          <div id="goalImpact" class="mt-3 glass panel rounded-xl p-3 hidden"></div>
+
+          <div class="mt-3 grid sm:grid-cols-3 gap-3 text-xs">
+            <div class="glass rounded-xl p-3 flex items-center justify-between">
+              <span class="text-slate-400">S&amp;P 500</span>
+              <span class="knum font-semibold" id="spx">—</span>
+            </div>
+            <div class="glass rounded-xl p-3 flex items-center justify-between">
+              <span class="text-slate-400">NASDAQ 100</span>
+              <span class="knum font-semibold" id="ndx">—</span>
+            </div>
+            <div class="glass rounded-xl p-3 flex items-center justify-between">
+              <span class="text-slate-400">BTC</span>
+              <span class="knum font-semibold" id="btc">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-span-12 xl:col-span-4 grid grid-rows-2 gap-4">
+          <div class="glass panel rounded-2xl p-4 shadow-glow hover-card">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-300">Allocation</h3>
+              <a href="#portfolio" class="text-[11px] text-cyan hover:underline">View details</a>
+            </div>
+            <div class="h-40 mt-1"><canvas id="allocChart"></canvas></div>
+            <div class="mt-2 grid grid-cols-3 text-center text-[11px]">
+              <div><div class="knum font-semibold" id="kEquity">—</div><div class="text-slate-400">Equity</div></div>
+              <div><div class="knum font-semibold" id="kCash">—</div><div class="text-slate-400">Cash</div></div>
+              <div><div class="knum font-semibold" id="kRisk">—</div><div class="text-slate-400">Risk</div></div>
+            </div>
+          </div>
+          <div class="glass panel rounded-2xl p-4 shadow-glow hover-card">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold text-slate-300">Watchlist</h3>
+              <div class="space-x-2">
+                <button id="wlAdd" class="text-[11px] px-2 py-1 rounded pill bg-panel">+ Add</button>
+                <button id="wlClear" class="text-[11px] px-2 py-1 rounded pill bg-panel">Clear</button>
+              </div>
+            </div>
+            <div id="watchlist" class="mt-2 divide-y divide-edge/60"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Goals & PMI -->
+      <section id="goals" class="col-span-12 grid grid-cols-12 gap-4">
+        <div class="col-span-12 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-slate-300">Goals & Personal Market Interpreter</h3>
+            <div class="space-x-2">
+              <button id="addGoalBtn" class="text-[11px] px-2 py-1 rounded pill bg-panel">+ New Goal</button>
+              <button id="clearGoalsBtn" class="text-[11px] px-2 py-1 rounded pill bg-panel">Clear</button>
+            </div>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-xs text-slate-400 mb-2">Your Goals</h4>
+              <div id="goalsList" class="divide-y divide-edge/60"></div>
+            </div>
+            <div>
+              <h4 class="text-xs text-slate-400 mb-2">Assignments (which assets drive each goal)</h4>
+              <div id="assignmentsList" class="divide-y divide-edge/60"></div>
+              <p class="text-[11px] text-slate-400 mt-2">Tip: In the Watchlist, click <span class="underline">Assign</span> to map a symbol to a goal.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Order + Insights Row -->
+      <section class="col-span-12 grid grid-cols-12 gap-4">
+        <div class="col-span-12 md:col-span-6 glass panel rounded-2xl p-4 shadow-glow hover-card" id="orders">
+          <h3 class="text-sm font-semibold text-slate-300 mb-3">Smart Order Ticket</h3>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="col-span-2">
+              <label class="text-[11px] text-slate-400">Symbol</label>
+              <input id="ordSymbol" class="w-full mt-1 h-10 rounded-lg bg-panel pill px-3 focus:outline-none focus:ring-2 focus:ring-cyan/40" placeholder="e.g., AAPL" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Side</label>
+              <select id="ordSide" class="w-full mt-1 h-10 rounded-lg bg-panel pill px-3">
+                <option>Buy</option>
+                <option>Sell</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Quantity</label>
+              <input id="ordQty" type="number" min="1" value="10" class="w-full mt-1 h-10 rounded-lg bg-panel pill px-3" />
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Order Type</label>
+              <select id="ordType" class="w-full mt-1 h-10 rounded-lg bg-panel pill px-3">
+                <option>Market</option>
+                <option>Limit</option>
+                <option>Stop</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] text-slate-400">Limit/Stop</label>
+              <input id="ordPx" type="number" step="0.01" class="w-full mt-1 h-10 rounded-lg bg-panel pill px-3" placeholder="—" />
+            </div>
+            <div class="col-span-2 grid sm:grid-cols-2 gap-3 mt-2">
+              <div class="text-[12px] text-slate-400">Route: <span class="text-slate-300">Linked Broker</span></div>
+              <button id="sendOrder" class="btn-primary text-sm font-semibold px-4 py-2 rounded-lg shadow-glow">Send Order</button>
+            </div>
+            <div id="ordMsg" class="col-span-2 text-[12px] text-slate-400 mt-1"></div>
+          </div>
+        </div>
+        <div class="col-span-12 md:col-span-6 glass panel rounded-2xl p-4 shadow-glow hover-card" id="insights">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-slate-300">AI Signal & Narrative</h3>
+            <button id="genInsight" class="text-[11px] px-2 py-1 rounded pill bg-panel">Generate</button>
+          </div>
+          <div id="insightBody" class="text-sm leading-6 text-slate-300">
+            Pick a symbol to generate a short thesis with key drivers, risk flags, and a probability-weighted direction. (Hook this to your LLM when ready.)
+          </div>
+        </div>
+      </section>
+
+      <!-- News / Activity Row -->
+      <section class="col-span-12 grid grid-cols-12 gap-4">
+        <div class="col-span-12 lg:col-span-8 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-300">Recent Market News</h3>
+            <button id="refreshNews" class="text-[11px] px-2 py-1 rounded pill bg-panel">Refresh</button>
+          </div>
+          <div id="newsList" class="mt-3 divide-y divide-edge/60"></div>
+          <div id="newsEmpty" class="text-sm text-slate-400 mt-4 hidden">No headlines available right now.</div>
+        </div>
+        <div class="col-span-12 lg:col-span-4 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <h3 class="text-sm font-semibold text-slate-300 mb-2">Activity</h3>
+          <ul id="activity" class="space-y-2 text-sm">
+            <li class="flex items-start gap-2"><i data-lucide="link" class="w-4 h-4 text-cyan mt-0.5"></i><span id="linkState">Brokers not linked. <button class="underline text-cyan" id="lnkNow">Link now</button>.</span></li>
+            <li class="flex items-start gap-2"><i data-lucide="bell" class="w-4 h-4 text-amber mt-0.5"></i><span>Set a price alert from the watchlist.</span></li>
+            <li class="flex items-start gap-2"><i data-lucide="beaker" class="w-4 h-4 text-blue mt-0.5"></i><span>Backtest any symbol from the chart menu.</span></li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Portfolio -->
+      <section id="portfolio" class="col-span-12 grid grid-cols-12 gap-4">
+        <div class="col-span-12 xl:col-span-8 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-slate-300">Holdings</h3>
+            <button id="refreshPortfolio" class="text-[11px] px-2 py-1 rounded pill bg-panel">Refresh</button>
+          </div>
+          <div class="overflow-auto mt-2">
+            <table class="w-full text-sm">
+              <thead class="text-slate-400 text-left">
+                <tr>
+                  <th class="py-2 pr-3">Symbol</th>
+                  <th class="py-2 pr-3">Qty</th>
+                  <th class="py-2 pr-3">Price</th>
+                  <th class="py-2 pr-3">Value</th>
+                  <th class="py-2 pr-3">Day</th>
+                </tr>
+              </thead>
+              <tbody id="holdingsBody" class="divide-y divide-edge/60"></tbody>
+            </table>
+            <div id="holdingsEmpty" class="text-sm text-slate-400 py-4 hidden">No holdings yet. Link a broker to pull real positions.</div>
+          </div>
+        </div>
+        <div class="col-span-12 xl:col-span-4 glass panel rounded-2xl p-4 shadow-glow hover-card">
+          <h3 class="text-sm font-semibold text-slate-300 mb-2">Linked Accounts</h3>
+          <ul id="accountsList" class="space-y-2 text-sm"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="lg:hidden fixed bottom-3 left-0 right-0 flex justify-center">
+    <div class="glass panel rounded-2xl px-4 py-2 flex gap-6">
+      <a href="#dashboard" class="flex flex-col items-center text-[11px]"><i data-lucide="layout-dashboard" class="w-5 h-5"></i><span>Home</span></a>
+      <a href="#goals" class="flex flex-col items-center text-[11px]"><i data-lucide="target" class="w-5 h-5"></i><span>Goals</span></a>
+      <a href="#orders" class="flex flex-col items-center text-[11px]"><i data-lucide="ticket" class="w-5 h-5"></i><span>Orders</span></a>
+      <a href="#insights" class="flex flex-col items-center text-[11px]"><i data-lucide="sparkles" class="w-5 h-5"></i><span>AI</span></a>
+      <a href="#settings" class="flex flex-col items-center text-[11px]"><i data-lucide="settings" class="w-5 h-5"></i><span>Settings</span></a>
+    </div>
+  </nav>
+
+  <!-- Broker link modal -->
+  <div id="brokerModal" class="hidden fixed inset-0 z-[60] items-center justify-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative glass panel rounded-2xl p-5 w-[96%] max-w-md shadow-glow">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="font-semibold">Link Broker</h4>
+        <button id="brokerClose"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <p class="text-sm text-slate-400 mb-3">Select a provider and continue the OAuth flow. (Stubbed for now.)</p>
+      <select class="w-full h-10 rounded-lg bg-panel pill px-3 mb-3">
+        <option>Fidelity Investments</option>
+        <option>Charles Schwab</option>
+        <option>Robinhood</option>
+        <option>Interactive Brokers</option>
+      </select>
+      <button class="btn-primary w-full py-2 rounded-lg font-semibold" id="brokerConnect">Continue</button>
+    </div>
+  </div>
+
+  <!-- Alert modal (polished) -->
+  <div id="alertModal" class="hidden fixed inset-0 z-[70] items-center justify-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative glass panel rounded-2xl p-5 w-[96%] max-w-md shadow-glow">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <h4 class="font-semibold">Set a price alert</h4>
+          <p class="text-sm text-slate-400">Set a price alert so you won’t miss the move.</p>
+        </div>
+        <button id="alertClose"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="mt-3">
+        <label class="text-[12px] text-slate-400">Symbol</label>
+        <input id="alertSymbol" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3 font-semibold" disabled />
+      </div>
+      <div class="mt-3">
+        <label class="text-[12px] text-slate-400">Target Price (fires at or above)</label>
+        <input id="alertPrice" type="number" step="0.01" placeholder="e.g., 250.00" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3" />
+        <div id="alertErr" class="text-[12px] text-rose-400 mt-1 hidden"></div>
+      </div>
+      <div class="mt-4 flex items-center justify-between gap-2">
+        <button id="alertRemove" class="px-3 py-2 rounded-lg bg-panel pill text-[13px]">Remove alert</button>
+        <div class="space-x-2">
+          <button id="alertCancel" class="px-3 py-2 rounded-lg bg-panel pill text-[13px]">Cancel</button>
+          <button id="alertSave" class="btn-primary px-3 py-2 rounded-lg font-semibold text-[13px]">Save alert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign to Goal modal -->
+  <div id="assignModal" class="hidden fixed inset-0 z-[70] items-center justify-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative glass panel rounded-2xl p-5 w-[96%] max-w-md shadow-glow">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <h4 class="font-semibold">Assign to goal</h4>
+          <p class="text-sm text-slate-400">Map a symbol to a goal and set its weight.</p>
+        </div>
+        <button id="assignClose"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="mt-2 grid gap-3">
+        <div>
+          <label class="text-[12px] text-slate-400">Symbol</label>
+          <input id="assignSymbol" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3 font-semibold" disabled />
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Goal</label>
+          <select id="assignGoal" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3"></select>
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Weight (%)</label>
+          <input id="assignWeight" type="number" min="0" max="100" step="1" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3" placeholder="e.g., 25" />
+        </div>
+      </div>
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="assignCancel" class="px-3 py-2 rounded-lg bg-panel pill text-[13px]">Cancel</button>
+        <button id="assignSave" class="btn-primary px-3 py-2 rounded-lg font-semibold text-[13px]">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Goal modal -->
+  <div id="goalModal" class="hidden fixed inset-0 z-[70] items-center justify-center">
+    <div class="absolute inset-0 bg-black/60"></div>
+    <div class="relative glass panel rounded-2xl p-5 w-[96%] max-w-md shadow-glow">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <h4 class="font-semibold">Create a goal</h4>
+          <p class="text-sm text-slate-400">Define what you’re trying to achieve so PMI can interpret markets for you.</p>
+        </div>
+        <button id="goalClose"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="grid gap-3">
+        <div>
+          <label class="text-[12px] text-slate-400">Name</label>
+          <input id="goalName" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3" placeholder="e.g., House in 5 years" />
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Type</label>
+          <select id="goalType" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3">
+            <option value="Savings">Savings (target amount)</option>
+            <option value="Income">Income (monthly/annual)</option>
+            <option value="Growth">Growth / Theme</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Horizon (years)</label>
+          <input id="goalHorizon" type="number" min="1" step="1" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3" placeholder="e.g., 5" />
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Target (USD per the goal)</label>
+          <input id="goalTarget" type="number" step="0.01" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3" placeholder="e.g., 100000" />
+        </div>
+        <div>
+          <label class="text-[12px] text-slate-400">Risk Preference</label>
+          <select id="goalRisk" class="w-full h-10 mt-1 rounded-lg bg-panel pill px-3">
+            <option>Conservative</option>
+            <option selected>Moderate</option>
+            <option>Aggressive</option>
+          </select>
+        </div>
+      </div>
+      <div class="mt-4 flex items-center justify-end gap-2">
+        <button id="goalCancel" class="px-3 py-2 rounded-lg bg-panel pill text-[13px]">Cancel</button>
+        <button id="goalSave" class="btn-primary px-3 py-2 rounded-lg font-semibold text-[13px]">Save goal</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Welcome / Window Layer ===== -->
+<div id="welcomeOverlay" class="fixed inset-0 z-[80] hidden">
+  <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+  <div class="relative h-full w-full flex items-center justify-center p-4">
+    <div class="glass panel shadow-glow rounded-2xl w-full max-w-6xl p-4 md:p-6">
+      <!-- Header row -->
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <div class="flex items-center gap-3">
+          <div class="h-8 w-8 rounded bg-gradient-to-br from-cyan/80 to-blue/70 flex items-center justify-center text-sm font-bold">A</div>
+          <div class="text-sm font-semibold tracking-wide">APEX Investor</div>
+          <span class="hidden sm:inline text-[11px] text-slate-400 ml-2">Quantum Terminal</span>
+        </div>
+        <button id="welcomeClose" class="h-9 px-3 rounded-lg bg-panel pill text-xs">Skip</button>
+      </div>
+
+      <!-- Body grid -->
+      <div class="grid grid-cols-12 gap-4">
+        <!-- Left column -->
+        <div class="col-span-12 md:col-span-3 glass panel rounded-2xl p-4">
+          <div class="text-[11px] text-slate-400 mb-2">Continue Learning</div>
+          <div class="rounded-xl bg-panel p-3 mb-3">
+            <div class="text-[11px] text-slate-400">Intro to Technical Analysis</div>
+            <div class="mt-1 font-semibold">Lesson 3 of 5</div>
+            <div class="text-[12px] text-slate-400">Support &amp; Resistance</div>
+            <button class="mt-3 w-full text-xs bg-panel pill rounded-lg px-3 py-2">Resume Lesson</button>
+          </div>
+          <ul class="space-y-1 text-sm">
+            <li class="hover:underline cursor-default">Building a Trading Plan</li>
+            <li class="hover:underline cursor-default">Risk Management</li>
+            <li class="hover:underline cursor-default">Quizzes</li>
+          </ul>
+        </div>
+
+        <!-- Middle card -->
+        <div class="col-span-12 md:col-span-5 glass panel rounded-2xl p-4">
+          <div class="text-sm font-semibold">Good afternoon, <span id="welcomeName">Investor</span>!</div>
+          <p class="text-sm mt-2 leading-6">
+            The <b id="welcomeIndexName">S&amp;P 500</b> is
+            <span id="welcomeIndexDelta" class="font-semibold">—</span> today.
+            However, your portfolio’s day change is
+            <span id="welcomeDay" class="font-semibold">—</span>.
+          </p>
+          <button id="enterPlatform" class="mt-4 btn-primary px-4 py-2 rounded-lg font-semibold shadow-glow">
+            Enter the Platform
+          </button>
+        </div>
+
+        <!-- Right card -->
+        <div class="col-span-12 md:col-span-4 glass panel rounded-2xl p-4">
+          <div class="text-sm font-semibold mb-1">AI Mentor</div>
+          <p class="text-sm leading-6">Ask about any ticker, get thesis snippets, risk flags, and probability-weighted direction.</p>
+          <button id="mentorQuick" class="mt-3 w-full text-xs bg-panel pill rounded-lg px-3 py-2">
+            Analyze my portfolio
+          </button>
+        </div>
+
+        <!-- Mini market tiles -->
+        <div class="col-span-12 grid sm:grid-cols-3 gap-3">
+          <div class="glass rounded-xl p-3 flex items-center justify-between">
+            <span class="text-slate-400 text-xs">S&amp;P 500</span>
+            <span id="welcomeSPX" class="knum font-semibold">—</span>
+          </div>
+          <div class="glass rounded-xl p-3 flex items-center justify-between">
+            <span class="text-slate-400 text-xs">NASDAQ 100</span>
+            <span id="welcomeNDX" class="knum font-semibold">—</span>
+          </div>
+          <div class="glass rounded-xl p-3 flex items-center justify-between">
+            <span class="text-slate-400 text-xs">BTC</span>
+            <span id="welcomeBTC" class="knum font-semibold">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+  <!-- Footer -->
+  <footer class="py-6 text-center text-[11px] text-slate-500">© 2025 APEX Investor. All rights reserved.</footer>
+
+  <script>
+    // --- Init ---
+    lucide.createIcons();
+
+    // Theme toggle
+    const themeBtn = document.getElementById('themeBtn');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const storedTheme = localStorage.getItem('apex-theme');
+    if ((storedTheme ?? (prefersDark? 'dark':'dark')) === 'dark') document.documentElement.classList.add('dark');
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('apex-theme', document.documentElement.classList.contains('dark')? 'dark':'light');
+    });
+
+    // Toast
+    const toast = (msg, ok=true) => {
+      const t = document.createElement('div');
+      t.className = `fixed bottom-5 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg glass panel shadow-glow text-sm ${ok? 'text-emerald-300':'text-rose-300'}`;
+      t.textContent = msg; document.body.appendChild(t);
+      setTimeout(()=> t.remove(), 2600);
+    };
+
+    // ======= STATE =======
+    const fmt = (n, f=0) => n.toLocaleString(undefined,{style:'currency', currency:'USD', maximumFractionDigits:f});
+    const state = JSON.parse(localStorage.getItem('apex-demo')) || {
+      equity: 254321.12,
+      cash: 18342.55,
+      day: 742.13,
+      watch: [
+        { s: 'AAPL', p: 0, c: 0 },
+        { s: 'NVDA', p: 0, c: 0 },
+        { s: 'MSFT', p: 0, c: 0 },
+        { s: 'TSLA', p: 0, c: 0 },
+        { s: 'AMZN', p: 0, c: 0 },
+      ],
+      alerts: { AAPL: 250 },
+      alertsFired: {},
+      profiles: {},   // cache of symbol profile { sector, beta, lastDiv, companyName }
+      goals: [
+        { id: 'g1', name: 'House in 5 years', type: 'Savings', horizonYears: 5, target: 100000, risk: 'Moderate' },
+      ],
+      goalMap: {      // goalId -> { symbol: weight% }
+        g1: { AAPL: 25, MSFT: 25, NVDA: 25, AMZN: 25 }
+      },
+      activeSymbol: '^GSPC', // default to real S&P 500
+      activeRange: '1D'
+    };
+    const save = () => localStorage.setItem('apex-demo', JSON.stringify(state));
+
+    // KPIs
+    const total = state.equity + state.cash;
+    document.getElementById('kpiTotal').textContent = fmt(total);
+    document.getElementById('kpiCash').textContent = fmt(state.cash);
+    const dayEl = document.getElementById('kpiDay');
+    dayEl.textContent = (state.day>=0?'+':'') + state.day.toLocaleString(undefined,{style:'currency',currency:'USD'});
+    dayEl.className = 'knum ' + (state.day>=0 ? 'text-emerald-400' : 'text-rose-400');
+
+    // Allocation mini-card
+    document.getElementById('kEquity').textContent = fmt(state.equity);
+    document.getElementById('kCash').textContent = fmt(state.cash);
+    document.getElementById('kRisk').textContent = 'Moderate';
+
+    // ======= FMP HELPERS =======
+    const FMP_KEY  = window.FMP_KEY;
+    const FMP_BASE = window.FMP_BASE || 'https://financialmodelingprep.com/api';
+    const fmpURL = (path, params={})=>{
+      const u = new URL(`${FMP_BASE}/${path}`);
+      u.searchParams.set('apikey', FMP_KEY);
+      for (const [k,v] of Object.entries(params||{})) if (v!==undefined && v!==null && v!=='') u.searchParams.set(k, v);
+      return u.toString();
+    };
+    // 👇 replace your current fmpBatchUrl with this
+function fmpBatchUrl(symbols, endpoint = 'v3/quote') {
+  // FMP expects raw comma-separated tickers in the PATH (not URL-encoded).
+  // e.g. /v3/quote/^GSPC,SPY,^NDX,QQQ,BTCUSD
+  const list = symbols.join(',');
+  return `${FMP_BASE}/${endpoint}/${list}?apikey=${encodeURIComponent(FMP_KEY)}`;
+}
+
+    async function fmpQuoteBatch(symbols){
+      if (!FMP_KEY || !symbols?.length) return [];
+      try {
+        let r = await fetch(fmpBatchUrl(symbols, 'v3/quote'), { cache:'no-store' });
+        if (!r.ok) throw new Error(`FMP quote HTTP ${r.status}`);
+        let data = await r.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          const r2 = await fetch(fmpBatchUrl(symbols, 'v3/quote-short'), { cache:'no-store' });
+          if (!r2.ok) throw new Error(`FMP quote-short HTTP ${r2.status}`);
+          const short = await r2.json();
+          data = (short || []).map(q => ({ symbol: q.symbol, price: Number(q.price), changesPercentage: null }));
+        }
+        return data;
+      } catch (e) { console.error('FMP fetch error:', e); return []; }
+    }
+    async function fmpProfile(symbol){
+      const s = symbol.toUpperCase();
+      if(state.profiles[s]) return state.profiles[s];
+      try{
+        const url = fmpURL(`v3/profile/${encodeURIComponent(s)}`);
+        const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('profile HTTP '+r.status);
+        const j = await r.json();
+        const p = j?.[0] || {};
+        const profile = { sector: p.sector || '—', beta: Number(p.beta)||0, lastDiv: Number(p.lastDiv)||0, companyName: p.companyName || s };
+        state.profiles[s] = profile; save();
+        return profile;
+      }catch(e){ console.warn('profile failed', e); return { sector:'—', beta:0, lastDiv:0, companyName:s }; }
+    }
+
+    // ======= SEARCH (LIVE) =======
+    const gSearch = document.getElementById('globalSearch');
+    const drop = document.getElementById('searchDrop');
+    let searchAbort = null;
+    const debounce = (fn, ms=200)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms);}; };
+    async function searchSymbols(query){
+      if (!query) return [];
+      const url = fmpURL('v3/search', { query, limit: 50 });
+      if (searchAbort) searchAbort.abort();
+      searchAbort = new AbortController();
+      try{
+        const res = await fetch(url, { signal: searchAbort.signal, cache:'no-store' });
+        if(!res.ok) throw new Error('search HTTP '+res.status);
+        const arr = await res.json();
+        const qUp = query.toUpperCase();
+        const starts = arr.filter(x => (x.symbol||'').toUpperCase().startsWith(qUp));
+        const contains = arr.filter(x => (x.symbol||'').toUpperCase().includes(qUp) && !(x.symbol||'').toUpperCase().startsWith(qUp));
+        return [...starts, ...contains].slice(0, 30);
+      }catch(e){ console.warn('search failed', e); return []; }
+    }
+    function renderSearchDrop(list){
+      if (!list.length){ drop.classList.add('hidden'); drop.innerHTML=''; return; }
+      drop.innerHTML = list.map(x=>{
+        const sym = x.symbol || '';
+        const name = x.name || '';
+        const ex = x.exchangeShortName || x.exchange || '';
+        return `<button class="w-full text-left px-3 py-2 hover:bg-white/5 cursor-pointer flex items-center gap-3" data-s="${sym}">
+          <div class="w-8 h-8 rounded-lg grd flex items-center justify-center text-xs font-bold">${sym.slice(0,5)}</div>
+          <div class="flex-1">
+            <div class="text-sm font-medium">${sym} <span class="text-[11px] text-slate-400">${ex}</span></div>
+            <div class="text-[11px] text-slate-400">${name}</div>
+          </div>
+        </button>`;
+      }).join('');
+      drop.classList.remove('hidden');
+    }
+    const doSearch = debounce(async ()=>{
+      const q = gSearch.value.trim();
+      if(!q){ drop.classList.add('hidden'); return; }
+      renderSearchDrop(await searchSymbols(q));
+    }, 180);
+    gSearch.addEventListener('input', doSearch);
+    document.addEventListener('click', (e)=>{ if(!drop.contains(e.target) && e.target!==gSearch) drop.classList.add('hidden'); });
+    drop.addEventListener('click', async (e)=>{
+      const d = e.target.closest('[data-s]'); if(!d) return;
+      const s = d.getAttribute('data-s');
+      gSearch.value = s; drop.classList.add('hidden');
+      document.getElementById('ordSymbol').value = s;
+      state.activeSymbol = s; save();
+      await loadSymbolIntoChart(s, state.activeRange || '1D');
+      refreshNews(); // update news for selected symbol
+      updateGoalImpact(); // update PMI card
+      toast(`Loaded ${s} — chart & news updated`);
+    });
+
+    // ======= WATCHLIST =======
+    const wl = document.getElementById('watchlist');
+    function renderWL(){
+      if(!state.watch.length){
+        wl.innerHTML = `<div class='text-sm text-slate-400 py-4'>No symbols yet. Click <b>+ Add</b> to track a ticker.</div>`;
+        return;
+      }
+      wl.innerHTML = state.watch.map(w => {
+        const up = (w.c||0) >= 0;
+        const alertPx = state.alerts[w.s];
+        return `<div class="py-2 flex items-center justify-between" data-row="${w.s}">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg grd flex items-center justify-center text-xs font-bold">${w.s}</div>
+            <div>
+              <div class="text-slate-200 text-sm font-medium">${w.s}</div>
+              <div class="text-[11px] text-slate-400">Alert ${alertPx? ('@ $'+alertPx):'—'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <div class="knum font-semibold">${w.p? '$'+w.p.toFixed(2) : '—'}</div>
+              <div class="text-[11px] ${up?'text-emerald-400':'text-rose-400'}">${w.p? (up?'+':'')+Number(w.c||0).toFixed(2)+'%':'—'}</div>
+            </div>
+            <button class="text-[11px] underline text-cyan" data-act="alert" data-s="${w.s}">Alert</button>
+            <button class="text-[11px] underline text-cyan" data-act="assign" data-s="${w.s}">Assign</button>
+            <button class="text-[11px] underline text-cyan" data-act="chart" data-s="${w.s}">Chart</button>
+            <button class="text-[11px] text-slate-400" data-act="del" data-s="${w.s}">✕</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    renderWL();
+
+    function applyQuotesToWatch(resp){
+      const by = Object.create(null);
+      (resp||[]).forEach(q => { if(q?.symbol) by[q.symbol.toUpperCase()] = q; });
+      state.watch.forEach(w => {
+        const q = by[w.s];
+        if(!q) return;
+        const prev = w.p || q.price;
+        w.p = Number(q.price) || 0;
+        if (typeof q.changesPercentage === 'number') w.c = q.changesPercentage;
+        else if (prev) w.c = prev ? ((w.p - prev)/prev)*100 : 0;
+        else w.c = 0;
+      });
+    }
+    async function refreshWatchlist(){
+      try{
+        const syms = state.watch.map(w => w.s.toUpperCase());
+        if (!syms.length) return;
+        const res = await fmpQuoteBatch(syms);
+        applyQuotesToWatch(res);
+        renderWL(); save();
+        checkAlerts();
+        updateGoalImpact(); // reflect changes in PMI card
+      }catch(e){ console.warn('watchlist refresh failed', e); }
+    }
+    wl.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button'); if(!btn) return;
+      const s = btn.getAttribute('data-s');
+      if(btn.getAttribute('data-act')==='del'){
+        state.watch = state.watch.filter(x=>x.s!==s); save(); renderWL(); toast(`Removed ${s}`); return;
+      }
+      if(btn.getAttribute('data-act')==='chart'){
+        state.activeSymbol = s; save();
+        loadSymbolIntoChart(s, state.activeRange||'1D').then(updateGoalImpact);
+        refreshNews();
+        toast(`Loaded ${s} chart`);
+        return;
+      }
+      if(btn.getAttribute('data-act')==='alert'){
+        openAlertModal(s);
+        return;
+      }
+      if(btn.getAttribute('data-act')==='assign'){
+        openAssignModal(s);
+        return;
+      }
+    });
+    document.getElementById('wlAdd').addEventListener('click', async ()=>{
+      const val = prompt('Add ticker symbol (e.g., AMD):',''); if(!val) return;
+      const s = val.trim().toUpperCase();
+      if(state.watch.some(x=>x.s===s)) return toast(`${s} already on list`, false);
+      state.watch.unshift({ s, p: 0, c: 0 });
+      save(); renderWL();
+      await refreshWatchlist();
+      toast(`${s} added`);
+    });
+    document.getElementById('wlClear').addEventListener('click', ()=>{ state.watch = []; save(); renderWL(); });
+
+    // ======= Alerts (real) + polished modal =======
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(()=>{});
+    }
+    function ding(){
+      try{
+        const ctx = new (window.AudioContext||window.webkitAudioContext)();
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type='sine'; o.frequency.value=880;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+0.6);
+        o.start(); o.stop(ctx.currentTime+0.65);
+      }catch{}
+    }
+    function notifyAlert(sym, price, target){
+      const row = document.querySelector(`[data-row="${sym}"]`);
+      if(row) row.classList.add('pulse');
+      toast(`ALERT: ${sym} hit $${price.toFixed(2)} (target $${target})`);
+      ding();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification(`Price Alert: ${sym}`, { body:`Hit $${price.toFixed(2)} (≥ $${target})` }); } catch {}
+      }
+    }
+    function checkAlerts(){
+      const quotesBy = Object.fromEntries(state.watch.map(w=>[w.s, w]));
+      for(const [sym, target] of Object.entries(state.alerts||{})){
+        const q = quotesBy[sym];
+        if(!q || !q.p) continue;
+        if(q.p >= target){
+          if(!state.alertsFired[sym]){
+            state.alertsFired[sym] = { at: Date.now(), px: q.p };
+            notifyAlert(sym, q.p, target);
+            save();
+          }
+        }
+      }
+    }
+    // Modal controls for Alerts
+    const alertModal = document.getElementById('alertModal');
+    const alertSymbol = document.getElementById('alertSymbol');
+    const alertPrice = document.getElementById('alertPrice');
+    const alertErr = document.getElementById('alertErr');
+    const alertSave = document.getElementById('alertSave');
+    const alertCancel = document.getElementById('alertCancel');
+    const alertRemove = document.getElementById('alertRemove');
+    document.getElementById('alertClose').addEventListener('click', closeAlertModal);
+    alertCancel.addEventListener('click', closeAlertModal);
+    function openAlertModal(sym){
+      alertSymbol.value = sym;
+      const existing = state.alerts[sym];
+      alertPrice.value = (existing ?? '');
+      alertErr.classList.add('hidden'); alertErr.textContent = '';
+      alertModal.classList.remove('hidden'); alertModal.classList.add('flex');
+      alertPrice.focus(); alertPrice.select();
+    }
+    function closeAlertModal(){
+      alertModal.classList.add('hidden'); alertModal.classList.remove('flex');
+    }
+    function saveAlert(){
+      const sym = alertSymbol.value.trim().toUpperCase();
+      const px = Number(alertPrice.value);
+      if(!sym){ return; }
+      if(!isFinite(px) || px<=0){
+        alertErr.textContent = 'Enter a valid price above 0.'; alertErr.classList.remove('hidden'); return;
+      }
+      state.alerts[sym] = px;
+      delete state.alertsFired[sym];
+      save(); renderWL();
+      toast(`Alert saved for ${sym} @ $${px}`);
+      closeAlertModal();
+    }
+    function removeAlert(){
+      const sym = alertSymbol.value.trim().toUpperCase();
+      if(sym && state.alerts[sym] !== undefined){
+        delete state.alerts[sym]; delete state.alertsFired[sym]; save(); renderWL();
+        toast(`Alert cleared for ${sym}`);
+      }
+      closeAlertModal();
+    }
+    alertSave.addEventListener('click', saveAlert);
+    alertRemove.addEventListener('click', removeAlert);
+    alertPrice.addEventListener('keydown', (e)=>{ if(e.key==='Enter') saveAlert(); });
+    alertModal.addEventListener('click', (e)=>{ if(e.target===alertModal) closeAlertModal(); });
+
+    // ======= Assign-to-goal modal =======
+    const assignModal = document.getElementById('assignModal');
+    const assignSymbol = document.getElementById('assignSymbol');
+    const assignGoal = document.getElementById('assignGoal');
+    const assignWeight = document.getElementById('assignWeight');
+    document.getElementById('assignClose').addEventListener('click', closeAssignModal);
+    document.getElementById('assignCancel').addEventListener('click', closeAssignModal);
+    document.getElementById('assignSave').addEventListener('click', () => {
+      const sym = assignSymbol.value.toUpperCase();
+      const gid = assignGoal.value;
+      const wt = Math.max(0, Math.min(100, Number(assignWeight.value||0)));
+      if(!gid) return toast('Pick a goal', false);
+      state.goalMap[gid] = state.goalMap[gid] || {};
+      state.goalMap[gid][sym] = wt;
+      save();
+      renderAssignments();
+      closeAssignModal();
+      toast(`Assigned ${sym} → ${wt}% of ${getGoalName(gid)}`);
+      updateGoalImpact();
+    });
+    function openAssignModal(sym){
+      assignSymbol.value = sym;
+      // populate goals
+      assignGoal.innerHTML = (state.goals||[]).map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+      // prefill weight with existing if any
+      let existing = 0;
+      for(const [gid, map] of Object.entries(state.goalMap||{})){
+        if(map[sym] != null){ existing = map[sym]; assignGoal.value = gid; break; }
+      }
+      assignWeight.value = existing || '';
+      assignModal.classList.remove('hidden'); assignModal.classList.add('flex');
+    }
+    function closeAssignModal(){ assignModal.classList.add('hidden'); assignModal.classList.remove('flex'); }
+    function getGoalName(id){ return (state.goals.find(g=>g.id===id)||{}).name || id; }
+
+    // ======= INDEX / BTC CHIPS =======
+  async function refreshTopChips(){
+  try{
+    const res = await fmpQuoteMany(['SPY','QQQ','BTCUSD']);
+    const by  = Object.fromEntries((res||[]).map(q => [String(q.symbol).toUpperCase(), q]));
+
+    const spy = by['SPY'];
+    const qqq = by['QQQ'];
+    const btc = by['BTCUSD'];
+
+    if (spy) document.getElementById('spx').textContent =
+      `${Number(spy.price||0).toLocaleString()} (${(pct(spy.changesPercentage)>=0?'▲':'▼')}${Math.abs(pct(spy.changesPercentage)).toFixed(1)}%)`;
+
+    if (qqq) document.getElementById('ndx').textContent =
+      `${Number(qqq.price||0).toLocaleString()} (${(pct(qqq.changesPercentage)>=0?'▲':'▼')}${Math.abs(pct(qqq.changesPercentage)).toFixed(1)}%)`;
+
+    if (btc) document.getElementById('btc').textContent =
+      `${fmt(Number(btc.price||0))} (${(pct(btc.changesPercentage)>=0?'▲':'▼')}${Math.abs(pct(btc.changesPercentage)).toFixed(1)}%)`;
+
+    // optional: swap in true index levels
+    const [gspc, ndx] = await Promise.allSettled([fmpQuoteOne('^GSPC'), fmpQuoteOne('^NDX')]);
+    if (gspc.status==='fulfilled' && gspc.value?.price){
+      const p = pct(spy?.changesPercentage ?? gspc.value.changesPercentage);
+      document.getElementById('spx').textContent =
+        `${Number(gspc.value.price).toLocaleString()} (${(p>=0?'▲':'▼')}${Math.abs(p).toFixed(1)}%)`;
+    }
+    if (ndx.status==='fulfilled' && ndx.value?.price){
+      const p = pct(qqq?.changesPercentage ?? ndx.value.changesPercentage);
+      document.getElementById('ndx').textContent =
+        `${Number(ndx.value.price).toLocaleString()} (${(p>=0?'▲':'▼')}${Math.abs(p).toFixed(1)}%)`;
+    }
+  }catch(e){ console.warn('chip refresh failed', e); }
+}
+
+
+
+    // ======= CHARTS (live from FMP) =======
+    const ctx = document.getElementById('priceChart');
+    const priceChart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: [], datasets: [{ label: 'Price', data: [], borderColor: '#00f2fe', backgroundColor: 'rgba(0,242,254,.08)', fill: true, pointRadius: 0, tension: .35 }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display:false }, tooltip: { mode: 'index', intersect:false } },
+        scales: { x: { grid: { color:'#1f2937' }, ticks:{ display:false } }, y: { grid:{ color:'#1f2937' }, ticks:{ callback: t=>'$'+t } } }
+      }
+    });
+
+    function setRangeButtons(activeRange){
+      document.querySelectorAll('.range').forEach(b=>{
+        if((b.getAttribute('data-range')||'')===activeRange) b.classList.add('range-active');
+        else b.classList.remove('range-active');
+      });
+    }
+
+    function ytdStartDate(){
+      const now = new Date();
+      return new Date(now.getFullYear(), 0, 1);
+    }
+
+    // Use liquid ETFs for intraday lines, but keep true index for the headline number
+function normalizeForChart(sym) {
+  const s = sym.toUpperCase();
+  if (s === '^GSPC') return 'SPY'; // S&P 500 ETF for intraday & daily candles
+  if (s === '^NDX')  return 'QQQ'; // NASDAQ-100 ETF
+  return s;
+}
+
+async function fmpQuote(symbol) {
+  const url = fmpURL(`v3/quote/${encodeURIComponent(symbol)}`);
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error('quote HTTP ' + r.status);
+  const j = await r.json();
+  return j?.[0] || null;
+}
+
+
+    async function fetchSeries(symbol, range){
+      const sym = normalizeForChart(symbol);
+      // Intraday
+      if(range==='1D'){
+        const url = fmpURL(`v3/historical-chart/5min/${encodeURIComponent(sym)}`, { limit: 390 });
+        const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist 1D');
+        const j = await r.json() || [];
+        return j.slice().reverse().map(x=>({ t: new Date(x.date), v: Number(x.close) }));
+      }
+      if(range==='1M'){
+        const url = fmpURL(`v3/historical-chart/30min/${encodeURIComponent(sym)}`, { limit: 400 });
+        const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist 1M');
+        const j = await r.json() || [];
+        return j.slice().reverse().map(x=>({ t: new Date(x.date), v: Number(x.close) }));
+      }
+      // Daily series
+      let timeseries;
+      if(range==='3M') timeseries = 64;
+      else if(range==='6M') timeseries = 126;
+      else if(range==='1Y') timeseries = 252;
+      else if(range==='2Y') timeseries = 252*2;
+      else if(range==='5Y') timeseries = 252*5;
+
+      if(range==='YTD'){
+        const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(sym)}`, { serietype: 'line' });
+        const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist YTD');
+        const j = await r.json();
+        const hist = (j?.historical || []).filter(x => new Date(x.date) >= ytdStartDate());
+        return hist.slice().reverse().map(x=>({ t: new Date(x.date), v: Number(x.close) }));
+      }
+
+      if(timeseries){
+        const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(sym)}`, { serietype: 'line', timeseries });
+        const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist long');
+        const j = await r.json();
+        const hist = j?.historical || [];
+        return hist.slice().reverse().map(x=>({ t: new Date(x.date), v: Number(x.close) }));
+      }
+
+      // default fallback
+      const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(sym)}`, { serietype: 'line', timeseries: 252 });
+      const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist default');
+      const j = await r.json();
+      const hist = j?.historical || [];
+      return hist.slice().reverse().map(x=>({ t: new Date(x.date), v: Number(x.close) }));
+    }
+
+ // ---------- symbol helpers ----------
+function isIndex(sym){ return (sym||'').startsWith('^'); }
+function etfForIndex(sym){
+  const s = sym.toUpperCase();
+  if (s === '^GSPC') return 'SPY';
+  if (s === '^NDX')  return 'QQQ';
+  return s;
+}
+
+// Single quote (for header)
+async function fmpQuote(symbol) {
+  const url = fmpURL(`v3/quote/${encodeURIComponent(symbol)}`);
+  const r = await fetch(url, { cache: 'no-store' });
+  if (!r.ok) throw new Error('quote HTTP ' + r.status);
+  const j = await r.json();
+  return j?.[0] || null;
+}
+
+function ytdStartDate(){
+  const now = new Date();
+  return new Date(now.getFullYear(), 0, 1);
+}
+
+// --- First-visit default ---
+const FIRST_KEY = 'apex-first-visit';
+if (!localStorage.getItem(FIRST_KEY)) {
+  state.activeSymbol = '^GSPC';
+  state.activeRange  = '1D';
+  save();
+  localStorage.setItem(FIRST_KEY, '1');
+}
+
+// --- Human label for header ---
+function humanLabel(symbol){
+  const s = (symbol||'').toUpperCase();
+  if (s === '^GSPC') return 'S&P 500';
+  if (s === '^NDX')  return 'NASDAQ 100';
+  if (s === 'BTCUSD' || s === 'BTC-USD') return 'Bitcoin';
+  return s;
+}
+function setMoLabel(symbol){
+  const el = document.getElementById('moLabel');
+  if (el) el.textContent = humanLabel(symbol);
+}
+
+
+// ---------- series fetchers ----------
+async function fetchSeriesForChart(symbol, range){
+  // intraday -> use ETF for liquidity; otherwise prefer the real symbol
+  const useSym = (range === '1D' || range === '1M') ? etfForIndex(symbol) : symbol;
+
+  // Intraday
+  if (range === '1D') {
+    const url = fmpURL(`v3/historical-chart/5min/${encodeURIComponent(useSym)}`, { limit: 390 });
+    const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist 1D');
+    const j = await r.json() || [];
+    return j.slice().reverse().map(x=>({ t:new Date(x.date), v:Number(x.close) }));
+  }
+  if (range === '1M') {
+    const url = fmpURL(`v3/historical-chart/30min/${encodeURIComponent(useSym)}`, { limit: 400 });
+    const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist 1M');
+    const j = await r.json() || [];
+    return j.slice().reverse().map(x=>({ t:new Date(x.date), v:Number(x.close) }));
+  }
+
+  // Daily+ (line series)
+  let timeseries;
+  if (range==='3M') timeseries = 64;
+  else if(range==='6M') timeseries = 126;
+  else if(range==='1Y') timeseries = 252;
+  else if(range==='2Y') timeseries = 504;
+  else if(range==='5Y') timeseries = 1260;
+
+  // YTD: fetch full then slice from Jan 1
+  if (range === 'YTD') {
+    const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(useSym)}`, { serietype:'line' });
+    const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist YTD');
+    const j = await r.json();
+    const hist = (j?.historical || []).filter(x => new Date(x.date) >= ytdStartDate());
+    return hist.slice().reverse().map(x=>({ t:new Date(x.date), v:Number(x.close) }));
+  }
+
+  const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(useSym)}`, { serietype:'line', timeseries: timeseries || 252 });
+  const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('hist daily');
+  const j = await r.json();
+  const hist = j?.historical || [];
+  return hist.slice().reverse().map(x=>({ t:new Date(x.date), v:Number(x.close) }));
+}
+
+// Header should always reflect the *true* index if viewing an index
+async function fetchSeriesForHeader(symbol, range){
+  if (isIndex(symbol)) {
+    // For indices, prefer the real symbol in all ranges (intraday may be sparse but
+    // header only needs endpoints to compute Δ)
+    if (range === '1D' || range === '1M') {
+      // fallback: use daily line to compute change for the day/month when intraday isn’t reliable
+      const url = fmpURL(`v3/historical-price-full/${encodeURIComponent(symbol)}`, { serietype:'line', timeseries: 32 });
+      const r = await fetch(url, { cache:'no-store' }); if(!r.ok) throw new Error('idx header');
+      const j = await r.json();
+      const hist = (j?.historical || []).slice().reverse().map(x=>({ t:new Date(x.date), v:Number(x.close) }));
+      return hist;
+    }
+    // other ranges (incl. YTD) – pull actual index
+    return fetchSeriesForChart(symbol, range); // chart fetch already uses real symbol for non-intraday
+  }
+  // Non-index: same as chart
+  return fetchSeriesForChart(symbol, range);
+}
+
+// ---------- header ----------
+async function updateMoHeader(symbol, headerSeries){
+  const moPriceEl  = document.getElementById('moPrice');
+  const moChangeEl = document.getElementById('moChange');
+
+  if(!headerSeries?.length){ moPriceEl.textContent=''; moChangeEl.textContent=''; return; }
+
+  // display price
+  let displayPrice = headerSeries[headerSeries.length-1].v;
+
+  // if it’s the S&P 500 index, show the real index level
+  try {
+    if ((symbol||'').toUpperCase() === '^GSPC') {
+      const q = await fmpQuote('^GSPC');
+      if (q?.price) displayPrice = Number(q.price);
+    }
+  } catch {}
+
+  // change computed from header series (true index for indices, not ETF)
+  const first = headerSeries[0].v;
+  const last  = headerSeries[headerSeries.length-1].v;
+  const chg   = last - first;
+  const pct   = first ? (chg/first*100) : 0;
+
+  moPriceEl.textContent  = ` • ${fmt(displayPrice, 2)}`;
+  moChangeEl.textContent = `${chg>=0? '▲':'▼'} ${Math.abs(chg).toFixed(2)} (${(pct>=0?'+':'')}${pct.toFixed(2)}%)`;
+  moChangeEl.className   = `text-[11px] ${pct>=0?'text-emerald-400':'text-rose-400'}`;
+}
+
+// ---------- loader ----------
+async function loadSymbolIntoChart(symbol, range){
+  try{
+    state.activeSymbol = (symbol||'').toUpperCase();
+    state.activeRange  = range;
+    save();
+      setMoLabel(state.activeSymbol);
+    setRangeButtons(range);
+
+    // series for the visual line
+    const chartSeries  = await fetchSeriesForChart(state.activeSymbol, range);
+    priceChart.data.labels = chartSeries.map(p => p.t);
+    priceChart.data.datasets[0].data = chartSeries.map(p => p.v);
+    priceChart.update();
+
+    // series for the header stats (true index when applicable)
+    const headerSeries = await fetchSeriesForHeader(state.activeSymbol, range);
+    await updateMoHeader(state.activeSymbol, headerSeries);
+
+    const ord = document.getElementById('ordSymbol');
+    if (ord && ord.value.trim().toUpperCase() !== state.activeSymbol && !state.activeSymbol.startsWith('^')) {
+      ord.value = state.activeSymbol;
+    }
+  } catch (e){
+    console.warn('chart load failed', e);
+    toast('Unable to load chart for '+symbol, false);
+  }
+}
+
+document.querySelectorAll('.range').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const r = btn.getAttribute('data-range') || '1D';
+    loadSymbolIntoChart(state.activeSymbol || '^GSPC', r).then(updateGoalImpact);
+    refreshNews();
+  });
+});
+
+// initial chart
+loadSymbolIntoChart(state.activeSymbol || '^GSPC', state.activeRange || '1D');
+
+// Allocation chart
+const allocCtx = document.getElementById('allocChart');
+const alloc = new Chart(allocCtx, {
+  type: 'doughnut',
+  data: {
+    labels:['Equity','Cash','Other'],
+    datasets:[{
+      data:[state.equity, state.cash, 1200],
+      backgroundColor:['#22d3ee','#60a5fa','#64748b'],
+      borderColor:'#0b0f14'
+    }]
+  },
+  options: { plugins:{ legend:{ display:false } }, cutout:'70%' }
+});
+
+    // ======= Orders (demo) =======
+    const ordMsg = document.getElementById('ordMsg');
+    document.getElementById('sendOrder').addEventListener('click', () => {
+      const s = document.getElementById('ordSymbol').value.trim().toUpperCase();
+      const side = document.getElementById('ordSide').value;
+      const qty = Number(document.getElementById('ordQty').value||0);
+      const type = document.getElementById('ordType').value;
+      const px = document.getElementById('ordPx').value;
+      if(!s || qty<=0){ ordMsg.textContent = 'Enter a valid symbol and quantity.'; ordMsg.className = 'text-rose-400 text-[12px]'; return; }
+      ordMsg.textContent = `${side} ${qty} ${s} as ${type}${type!=='Market' && px? ' @ '+px : ''}. (Wire this to your broker route.)`;
+      ordMsg.className = 'text-emerald-400 text-[12px]';
+    });
+
+    // ======= Insights (demo) =======
+    document.getElementById('genInsight').addEventListener('click', () => {
+      const s = (document.getElementById('ordSymbol').value || state.activeSymbol || 'AAPL').toUpperCase();
+      document.getElementById('insightBody').innerHTML = `
+        <div class="space-y-3">
+          <div class="text-sm"><span class="text-slate-400">Signal:</span> <span class="font-semibold text-emerald-400">Bullish bias (63%)</span> next 2–4 weeks for ${s}.</div>
+          <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
+            <li>Momentum improving; higher highs on rising volume.</li>
+            <li>Earnings revisions trending up; options skew favoring calls.</li>
+            <li>Risk: macro yield spike or supply-chain hiccup.</li>
+          </ul>
+          <div class="text-[12px] text-slate-400">This module is placeholder — connect to your LLM/rules engine.</div>
+        </div>`;
+    });
+
+    // ======= Market News (LIVE via FMP) =======
+    const newsList = document.getElementById('newsList');
+    const newsEmpty = document.getElementById('newsEmpty');
+    const refreshNewsBtn = document.getElementById('refreshNews');
+
+    function timeAgo(iso){
+      const d = new Date(iso);
+      const diff = (Date.now() - d.getTime())/1000;
+      if (diff<60) return `${Math.floor(diff)}s ago`;
+      if (diff<3600) return `${Math.floor(diff/60)}m ago`;
+      if (diff<86400) return `${Math.floor(diff/3600)}h ago`;
+      return `${Math.floor(diff/86400)}d ago`;
+    }
+    function renderNews(items){
+      if(!items.length){ newsEmpty.classList.remove('hidden'); newsList.innerHTML=''; return; }
+      newsEmpty.classList.add('hidden');
+      newsList.innerHTML = items.map(n=>{
+        const url = n.url || '#';
+        const src = n.site || n.source || '—';
+        const when = n.publishedDate ? timeAgo(n.publishedDate) : '';
+        const title = n.title || 'Untitled';
+        const img = n.image || n.image_url || '';
+        return `<a href="${url}" target="_blank" rel="noopener" class="block py-3 news-card">
+          <div class="flex gap-3">
+            ${img ? `<img src="${img}" alt="" class="w-16 h-16 rounded object-cover hidden sm:block">` : ''}
+            <div class="flex-1">
+              <div class="text-sm font-semibold text-slate-200">${title}</div>
+              <div class="text-[11px] text-slate-400 mt-1">${src}${when? ' • '+when:''}</div>
+            </div>
+          </div>
+        </a>`;
+      }).join('');
+    }
+    async function fetchNewsForSymbol(sym, limit=20){
+      try{
+        const url = fmpURL('v3/stock_news', { tickers: sym, limit });
+        const r = await fetch(url, { cache:'no-store' });
+        if(!r.ok) throw new Error('news HTTP '+r.status);
+        return await r.json() || [];
+      }catch(e){ console.warn('news sym failed', e); return []; }
+    }
+    async function fetchNewsGeneral(limit=20){
+      try{
+        const url = fmpURL('v3/stock_news', { limit });
+        const r = await fetch(url, { cache:'no-store' });
+        if(!r.ok) throw new Error('news gen HTTP '+r.status);
+        return await r.json() || [];
+      }catch(e){ console.warn('news gen failed', e); return []; }
+    }
+    async function refreshNews(){
+      const sym = (state.activeSymbol || '').toUpperCase();
+      let items = [];
+      if(sym && !sym.startsWith('^')) items = await fetchNewsForSymbol(sym, 20);
+      if(!items.length) items = await fetchNewsGeneral(20);
+      renderNews(items);
+    }
+    refreshNewsBtn.addEventListener('click', refreshNews);
+
+    // ======= Goals & PMI rendering =======
+    const goalsList = document.getElementById('goalsList');
+    const assignmentsList = document.getElementById('assignmentsList');
+    function renderGoals(){
+      if(!state.goals.length){ goalsList.innerHTML = `<div class="text-sm text-slate-400 py-4">No goals yet. Click <b>+ New Goal</b> to get started.</div>`; return; }
+      goalsList.innerHTML = state.goals.map(g=>{
+        return `<div class="py-3 flex items-center justify-between">
+          <div>
+            <div class="text-sm font-semibold">${g.name}</div>
+            <div class="text-[11px] text-slate-400">${g.type} • Horizon: ${g.horizonYears}y • Target: ${fmt(Number(g.target||0))} • Risk: ${g.risk}</div>
+          </div>
+          <div class="space-x-2">
+            <button data-act="del-goal" data-id="${g.id}" class="text-[11px] text-slate-400">Delete</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    function renderAssignments(){
+      const parts = [];
+      for(const g of state.goals){
+        const map = state.goalMap[g.id] || {};
+        const rows = Object.entries(map).map(([s,w])=>`<span class="px-2 py-1 rounded bg-panel pill text-[11px]">${s} · ${w}%</span>`).join(' ');
+        parts.push(`<div class="py-3">
+          <div class="text-sm font-semibold mb-1">${g.name}</div>
+          <div>${rows || '<span class="text-[11px] text-slate-400">Nothing assigned yet.</span>'}</div>
+        </div>`);
+      }
+      assignmentsList.innerHTML = parts.join('');
+    }
+    goalsList?.addEventListener('click',(e)=>{
+      const btn = e.target.closest('[data-act="del-goal"]'); if(!btn) return;
+      const id = btn.getAttribute('data-id');
+      state.goals = state.goals.filter(g=>g.id!==id);
+      delete state.goalMap[id];
+      save(); renderGoals(); renderAssignments(); updateGoalImpact();
+      toast('Goal removed');
+    });
+    document.getElementById('clearGoalsBtn').addEventListener('click', ()=>{
+      state.goals = []; state.goalMap = {}; save(); renderGoals(); renderAssignments(); updateGoalImpact();
+    });
+
+    // Goal modal
+    const goalModal = document.getElementById('goalModal');
+    function openGoalModal(){ goalModal.classList.remove('hidden'); goalModal.classList.add('flex'); }
+    function closeGoalModal(){ goalModal.classList.add('hidden'); goalModal.classList.remove('flex'); }
+    document.getElementById('addGoalBtn').addEventListener('click', openGoalModal);
+    document.getElementById('goalClose').addEventListener('click', closeGoalModal);
+    document.getElementById('goalCancel').addEventListener('click', closeGoalModal);
+    document.getElementById('goalSave').addEventListener('click', ()=>{
+      const name = document.getElementById('goalName').value.trim();
+      const type = document.getElementById('goalType').value;
+      const horizonYears = Number(document.getElementById('goalHorizon').value||0);
+      const target = Number(document.getElementById('goalTarget').value||0);
+      const risk = document.getElementById('goalRisk').value;
+      if(!name) return toast('Name your goal', false);
+      const id = 'g'+Math.random().toString(36).slice(2,8);
+      state.goals.push({ id, name, type, horizonYears, target, risk });
+      state.goalMap[id] = state.goalMap[id] || {};
+      save(); renderGoals(); renderAssignments(); closeGoalModal(); updateGoalImpact();
+      toast('Goal created');
+    });
+
+    renderGoals(); renderAssignments();
+
+    // ======= PMI: Personal Market Interpreter =======
+    const goalImpactEl = document.getElementById('goalImpact');
+
+    function getSymbolQuote(sym){
+      const w = state.watch.find(x=>x.s===sym); return w || { p:0, c:0 };
+    }
+
+    function estimateIncomeFromDiv(sym, price, profile){
+      // naive annual income estimate = lastDiv * 4 (quarterly) — demo placeholder
+      const lastDiv = Number(profile?.lastDiv||0);
+      if(!price || !lastDiv) return 0;
+      return lastDiv * 4;
+    }
+
+    function summarizeImpactForGoal(goal, sym, quote, profile){
+      const weight = (state.goalMap[goal.id]||{})[sym] || 0;
+      const cp = Number(quote.c||0); // % change today if available
+      const direction = cp>=0 ? '▲' : '▼';
+      const mag = Math.abs(cp) * (weight/100);
+      let line = '';
+      if(goal.type==='Savings'){
+        const sign = cp>=0 ? 'slightly improves' : 'slightly reduces';
+        const est = (mag*0.15).toFixed(2); // scaled heuristic
+        line = `${sym} ${direction}${Math.abs(cp).toFixed(2)}% ${sign} the odds of reaching **${goal.name}** (~${est}pp impact at your ${weight}% allocation).`;
+      }else if(goal.type==='Income'){
+        const income = estimateIncomeFromDiv(sym, quote.p, profile);
+        const incomeDelta = (income * cp/100) * (weight/100);
+        line = `${sym} ${direction}${Math.abs(cp).toFixed(2)}% implies ~$${Math.abs(incomeDelta).toFixed(2)} change to projected annual income for **${goal.name}** (allocation ${weight}%).`;
+      }else{
+        // Growth / Theme
+        const sector = profile?.sector || '—';
+        const beta = Number(profile?.beta||0).toFixed(2);
+        const boost = (mag*0.20).toFixed(2);
+        line = `${sym} ${direction}${Math.abs(cp).toFixed(2)}% (sector ${sector}, β ${beta}) ${cp>=0?'supports':'weighs on'} your **${goal.name}** trajectory (~${boost}pp effect at ${weight}%).`;
+      }
+      return line;
+    }
+
+    async function updateGoalImpact(){
+      const sym = (state.activeSymbol||'').toUpperCase();
+      if(!sym || !state.goals.length){ goalImpactEl.classList.add('hidden'); goalImpactEl.innerHTML=''; return; }
+      const profile = await fmpProfile(sym);
+      const quote = getSymbolQuote(sym);
+      const lines = [];
+      for(const g of state.goals){
+        const map = state.goalMap[g.id] || {};
+        if(map[sym]>0){
+          lines.push(summarizeImpactForGoal(g, sym, quote, profile));
+        }
+      }
+      if(!lines.length){
+        const cp = Number(quote.c||0);
+        const direction = cp>=0 ? '▲' : '▼';
+        lines.push(`${sym} ${direction}${Math.abs(cp).toFixed(2)}% today. Assign this symbol to a goal to see personalized impact.`);
+      }
+      goalImpactEl.innerHTML = `
+        <div class="flex items-start gap-3">
+          <i data-lucide="bot" class="w-4 h-4 text-cyan mt-0.5"></i>
+          <div class="text-sm leading-6">
+            <div class="font-semibold text-slate-200 mb-1">Personal Market Interpreter</div>
+            <ul class="list-disc list-inside space-y-1">
+              ${lines.map(l=>`<li>${l}</li>`).join('')}
+            </ul>
+          </div>
+        </div>`;
+      goalImpactEl.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    // ======= Periodic market refresh =======
+    async function refreshAll(){
+      await Promise.all([ refreshWatchlist(), refreshTopChips() ]);
+      // PMI will be refreshed from refreshWatchlist -> updateGoalImpact()
+    }
+    refreshAll();
+    refreshNews();
+    setInterval(refreshAll, 10000);
+
+    // ======= SnapTrade broker link =======
+    const API_BASE = window.API_BASE; const USERID_KEY = window.USERID_KEY;
+    const getUserId = ()=> localStorage.getItem(USERID_KEY)||"";
+    const setUserId = (id)=> localStorage.setItem(USERID_KEY,id);
+    function connectBroker(){ window.location.assign(`${API_BASE}/connect?web=1&fresh=1`); }
+
+   async function checkLinkedAndRefresh(){
+  const userId = getUserId();
+  const linkedSpan = document.getElementById('linkState');
+  const linkBtn = document.getElementById('linkBtn');
+  const linkBtnTxt = document.getElementById('linkBtnTxt');
+
+  function setLinkedUI(isLinked){
+    if (linkBtnTxt) linkBtnTxt.textContent = isLinked ? 'Linked ✓' : 'Link Broker';
+    if (linkBtn) linkBtn.disabled = isLinked;
+    if (linkedSpan) {
+      linkedSpan.innerHTML = isLinked
+        ? 'Broker linked ✓'
+        : 'Brokers not linked. <button class="underline text-cyan" id="lnkNow">Link now</button>.';
+    }
+  }
+
+  if (!userId) { setLinkedUI(false); return; }
+
+  try {
+    const linkRes = await fetch(`${API_BASE}/realtime/linked?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' });
+    const linkJson = await linkRes.json();
+    const linked = !!linkJson?.linked;
+    setLinkedUI(linked);
+
+    if (linked) {
+      const s = await fetch(`${API_BASE}/realtime/summary?userId=${encodeURIComponent(userId)}`, { cache: 'no-store' }).then(r => r.json());
+
+      const eq = Number(s?.totals?.equity || 0);
+      const cash = Number(s?.totals?.cash || 0);
+      const buyingPower = Number(s?.totals?.buyingPower || 0);
+
+      document.getElementById('kpiTotal').textContent = (eq + cash).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+      document.getElementById('kpiCash').textContent = cash.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+      const kpiBP = document.getElementById('kpiBuyingPower');
+      if (kpiBP) kpiBP.textContent = buyingPower.toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+
+      renderAccounts(s?.accounts || []);
+      renderHoldings(s?.positions || []);
+    }
+
+  } catch (e) {
+    console.warn('link check failed', e);
+  }
+}
+
+function renderAccounts(accts){
+  const ul = document.getElementById('accountsList');
+  if (!ul) return;
+  if (!accts.length){
+    ul.innerHTML = '<li class="text-slate-400">No accounts found.</li>';
+    return;
+  }
+  ul.innerHTML = accts.map(a => `
+    <li class="flex items-center justify-between glass rounded-lg p-2">
+      <div>
+        <div class="font-medium">${a?.brokerage?.name || a?.institution?.name || a?.name || 'Account'}</div>
+        <div class="text-[12px] text-slate-400">${a?.numberMasked || ''}</div>
+      </div>
+      <div class="knum">${a?.currency || 'USD'}</div>
+    </li>
+  `).join('');
+}
+
+function renderHoldings(positions){
+  const body = document.getElementById('holdingsBody');
+  const empty = document.getElementById('holdingsEmpty');
+  if (!body) return;
+
+  if (!Array.isArray(positions) || !positions.length){
+    body.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+
+  if (empty) empty.classList.add('hidden');
+
+  body.innerHTML = positions.map(p => {
+    const s   = p?.symbol || p?.ticker || '—';
+    const q   = Number(p?.quantity || 0);
+    const px  = Number(p?.price || p?.lastPrice || 0);
+    const val = q * px;
+    const day = Number(p?.dayChange || 0);
+    const cls = day >= 0 ? 'text-emerald-400' : 'text-rose-400';
+    return `
+      <tr>
+        <td class="py-2 pr-3">${s}</td>
+        <td class="py-2 pr-3 knum">${q.toFixed(2)}</td>
+        <td class="py-2 pr-3 knum">$${px.toFixed(2)}</td>
+        <td class="py-2 pr-3 knum">$${val.toFixed(2)}</td>
+        <td class="py-2 pr-3 knum ${cls}">${day >= 0 ? '+' : ''}$${Math.abs(day).toFixed(2)}</td>
+      </tr>`;
+  }).join('');
+}
+
+    // Handle callback / userId param
+    // Handle callback / userId param — improved (keeps dashboard visible)
+(function handleCallback(){
+  const params = new URLSearchParams(location.search);
+  const uid = params.get('userId');
+  if (!uid) return;
+
+  localStorage.setItem(USERID_KEY, uid);
+
+  // Overlay while polling
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 flex items-center justify-center bg-black/80 text-white z-[100]';
+  overlay.innerHTML = `<div class="text-center">
+    <h1 class="text-xl mb-2">Connecting your broker…</h1>
+    <p>Please wait. This may take a few seconds.</p>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const deadline = Date.now() + 120000;
+  const sleep = (ms) => new Promise(r=>setTimeout(r,ms));
+  (async function poll(){
+    while(Date.now()<deadline){
+      try {
+        const r = await fetch(`${API_BASE}/realtime/linked?userId=${encodeURIComponent(uid)}`, {cache:'no-store'});
+        const j = await r.json();
+        if (j?.linked){
+          overlay.remove();
+          location.replace(location.pathname);
+          return;
+        }
+      } catch {}
+      await sleep(1500);
+    }
+    overlay.remove();
+    location.replace(location.pathname);
+  })();
+})();
+
+
+    // Event bindings
+    document.getElementById('linkBtn').onclick = connectBroker;
+    // delegate because we re-render linkState sometimes
+    document.addEventListener('click', (e)=>{
+      const ln = e.target.closest('#lnkNow'); if(ln){ e.preventDefault(); connectBroker(); }
+    });
+    document.getElementById('refreshPortfolio')?.addEventListener('click', checkLinkedAndRefresh);
+
+    // Kickoff
+    checkLinkedAndRefresh();
+    setInterval(checkLinkedAndRefresh, 20000);
+  </script>
+
+<script>
+  // --- HARDENED SNAPTRADE LINK WIRING ---
+  (function () {
+    const API_BASE   = (window.API_BASE || '').trim();
+    const USERID_KEY = (window.USERID_KEY || 'snaptradeUserId').trim();
+
+    // Ensure the main button is a "button" not "submit"
+    const linkBtn = document.getElementById('linkBtn');
+    if (linkBtn && !linkBtn.getAttribute('type')) linkBtn.setAttribute('type','button');
+
+    function openBrokerModal() {
+      const m = document.getElementById('brokerModal');
+      if (!m) return;
+      m.classList.remove('hidden'); m.classList.add('flex');
+      document.getElementById('brokerClose')?.addEventListener('click', () => {
+        m.classList.add('hidden'); m.classList.remove('flex');
+      });
+      document.getElementById('brokerConnect')?.addEventListener('click', () => connectBroker());
+    }
+
+    function connectBroker() {
+      if (!API_BASE) {
+        console.error('[LinkBroker] Missing API_BASE');
+        window.toast?.('Link config missing. Opening fallback…', false);
+        openBrokerModal();
+        return;
+      }
+      try {
+        const url = `${API_BASE}/connect?web=1&fresh=1`;
+        console.log('[LinkBroker] redirect →', url);
+        window.location.assign(url);    // uses top-level navigation (not a popup)
+      } catch (err) {
+        console.error('[LinkBroker] navigation failed', err);
+        window.toast?.('Couldn’t start broker link. Opening fallback…', false);
+        openBrokerModal();
+      }
+    }
+    window.connectBroker = connectBroker;
+
+    // Bind the topbar button reliably
+    if (linkBtn) {
+      linkBtn.addEventListener('click', (e) => { e.preventDefault(); connectBroker(); }, { passive: true });
+    }
+
+    // Delegate clicks for the dynamic inline “Link now” inside #linkState
+    document.addEventListener('click', (e) => {
+      const ln = e.target.closest('#lnkNow');
+      if (ln) { e.preventDefault(); connectBroker(); }
+    });
+
+    // Optional: refresh portfolio / link status safely even if earlier code throws
+    (function safeStart(){
+      try {
+        if (typeof checkLinkedAndRefresh === 'function') {
+          checkLinkedAndRefresh();
+          setInterval(checkLinkedAndRefresh, 20000);
+        } else {
+          console.warn('[LinkBroker] checkLinkedAndRefresh not found (ok if you removed it).');
+        }
+      } catch (err) {
+        console.error('[LinkBroker] startup refresh failed', err);
+      }
+    })();
+  })();
+</script>
+
+<script>
+  (function welcomeLayer(){
+    const overlay = document.getElementById('welcomeOverlay');
+    if (!overlay) return;
+
+    const FIRST_FLAG = 'apex-welcome-seen';
+
+    // Show on first visit OR when forced with ?welcome=1
+    const force = new URLSearchParams(location.search).get('welcome') === '1';
+    const shouldShow = force || !localStorage.getItem(FIRST_FLAG);
+
+    function open() {
+      overlay.classList.remove('hidden');
+      requestAnimationFrame(()=> overlay.classList.add('show'));
+
+      // Pull live values from your existing UI
+      try {
+        document.getElementById('welcomeDay').textContent =
+          document.getElementById('kpiDay')?.textContent || '—';
+        document.getElementById('welcomeSPX').textContent =
+          document.getElementById('spx')?.textContent || '—';
+        document.getElementById('welcomeNDX').textContent =
+          document.getElementById('ndx')?.textContent || '—';
+        document.getElementById('welcomeBTC').textContent =
+          document.getElementById('btc')?.textContent || '—';
+
+        const moLabel = document.getElementById('moLabel')?.textContent?.trim() || 'S&P 500';
+        document.getElementById('welcomeIndexName').textContent = moLabel;
+
+        const moChange = document.getElementById('moChange')?.textContent?.trim();
+        if (moChange) document.getElementById('welcomeIndexDelta').textContent = moChange;
+      } catch {}
+    }
+    function close() {
+      overlay.classList.remove('show');
+      setTimeout(()=> overlay.classList.add('hidden'), 250);
+      localStorage.setItem(FIRST_FLAG, '1');
+    }
+
+    // Buttons
+    document.getElementById('enterPlatform')?.addEventListener('click', close);
+    document.getElementById('welcomeClose')?.addEventListener('click', close);
+    document.getElementById('mentorQuick')?.addEventListener('click', () => {
+      close();
+      document.getElementById('genInsight')?.click();
+      location.hash = '#insights';
+    });
+
+    // Esc key
+    document.addEventListener('keydown', (e)=> { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) close(); });
+
+    if (shouldShow) open();
+  })();
+</script>
+
+
+
+
+
+
+</body>
+</html>

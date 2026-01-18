@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Register Passkey</title>
+</head>
+<body>
+  <h2>Register Your Passkey</h2>
+  <button id="registerBtn">Create Passkey</button>
+  <pre id="status"></pre>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      projectId: "YOUR_PROJECT_ID",
+      appId: "YOUR_APP_ID",
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const functions = getFunctions(app);
+
+    const generateRegistrationOptions = httpsCallable(functions, 'generateRegistrationOptions');
+    const verifyRegistration = httpsCallable(functions, 'verifyRegistration');
+
+    let user = null;
+    onAuthStateChanged(auth, u => {
+      if (u) {
+        user = u;
+        document.getElementById("status").textContent = `Logged in as ${u.email}`;
+      } else {
+        user = null;
+        document.getElementById("status").textContent = "Please log in first";
+      }
+    });
+
+    function bufferToBase64(buffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    }
+
+    function base64ToBuffer(base64) {
+      return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+    }
+
+    async function registerPasskey() {
+      if (!user) {
+        alert("Log in first!");
+        return;
+      }
+
+      const optionsResponse = await generateRegistrationOptions();
+      const options = optionsResponse.data;
+
+      options.challenge = base64ToBuffer(options.challenge);
+      options.user.id = base64ToBuffer(options.user.id);
+
+      const credential = await navigator.credentials.create({ publicKey: options });
+
+      const attestationResponse = {
+        id: credential.id,
+        rawId: bufferToBase64(credential.rawId),
+        type: credential.type,
+        response: {
+          clientDataJSON: bufferToBase64(credential.response.clientDataJSON),
+          attestationObject: bufferToBase64(credential.response.attestationObject),
+        }
+      };
+
+      const verificationResult = await verifyRegistration(attestationResponse);
+
+      if (verificationResult.data.success) {
+        document.getElementById("status").textContent = "Passkey registered successfully!";
+      } else {
+        document.getElementById("status").textContent = "Passkey registration failed.";
+      }
+    }
+
+    document.getElementById("registerBtn").addEventListener("click", registerPasskey);
+  </script>
+</body>
+</html>
