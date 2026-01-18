@@ -54,7 +54,7 @@ app.get('/', (req, res) => {
 });
 
 // === ONLY ONE (correct) /api/track endpoint ===
-aapp.post('/api/track', async (req, res) => {
+app.post('/api/track', async (req, res) => {
   // PREFERRED: use user_id from the cookie
   const user_id = req.cookies.user_id || req.body.user_id;
   const session_id = req.cookies.session_id || req.body.session_id;
