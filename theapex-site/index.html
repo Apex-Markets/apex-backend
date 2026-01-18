@@ -1462,5 +1462,24 @@ document.addEventListener("DOMContentLoaded", () => {
             fetchEarnings(selectedDate);
         });
     </script>
+
+    <!-- Add this just before </body> -->
+<script>
+  // Parse and display cookies for debugging
+  document.addEventListener('DOMContentLoaded', function () {
+    // This string: "name1=val1; name2=val2"
+    const cookieStr = document.cookie;
+    // Make it prettier for the page
+    const div = document.createElement('div');
+    div.style.background = '#222';
+    div.style.color = '#fff';
+    div.style.padding = '10px';
+    div.style.margin = '20px';
+    div.style.borderRadius = '8px';
+    div.innerHTML = '<b>Cookies set for this site:</b><br>' + 
+      (cookieStr ? cookieStr.replace(/;/g,';<br>') : '(none)');
+    document.body.appendChild(div);
+  });
+</script>
 </body>
 </html>
