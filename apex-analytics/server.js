@@ -9,7 +9,10 @@ const { Pool } = require('pg');
 const app = express();
 
 app.use(cors({
-  origin: 'https://theapexinvestor.com', // or your frontend domain(s)
+  origin: [
+    'https://theapexinvestor.com',
+    'https://www.theapexinvestor.com'
+  ],
   credentials: true
 }));
 
@@ -17,11 +20,8 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 const pool = new Pool({
-  user: 'apex_media_10',
-  host: 'localhost',
-  database: 'apex_media',
-  password: 'l0GqUC5AAqkbiP1Ol3JtWERc0uil7y3m', // <--- Use your actual password here
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
 app.get('/', (req, res) => {
@@ -31,14 +31,17 @@ app.get('/', (req, res) => {
   const userId = req.cookies.user_id || Math.random().toString(36).substring(2, 12);
   const sessionId = req.cookies.session_id || Math.random().toString(36).substring(2, 14);
 
-  // Set cookies to browser
+  // Dynamically set cookie domain for prod/dev
+  const isProd = process.env.NODE_ENV === 'production';
+  const cookieDomain = isProd ? '.theapexinvestor.com' : undefined;
+
   res.cookie('user_id', userId, {
     maxAge: 30 * 24 * 60 * 60 * 1000,
     httpOnly: false,
     sameSite: 'Lax',
     path: '/',
     secure: true,
-    domain: '.theapexinvestor.com'
+    domain: cookieDomain
   });
   res.cookie('session_id', sessionId, {
     maxAge: 2 * 60 * 60 * 1000,
@@ -46,22 +49,17 @@ app.get('/', (req, res) => {
     sameSite: 'Lax',
     path: '/',
     secure: true,
-    domain: '.theapexinvestor.com'
+    domain: cookieDomain
   });
 
   console.log('Set cookies: user_id =', userId, ', session_id =', sessionId);
-  res.send('Hello from server! (cookies set)');
+  // Also return as JSON for frontend JS access on first load
+  res.json({ message: 'Hello from server! (cookies set)', user_id: userId, session_id: sessionId });
 });
 
-// === ONLY ONE (correct) /api/track endpoint ===
 app.post('/api/track', async (req, res) => {
-  // PREFERRED: use user_id from the cookie
-  const user_id = req.cookies.user_id || req.body.user_id;
-  const session_id = req.cookies.session_id || req.body.session_id;
-  const { event_type, page_url, event_data } = req.body;
-
-  console.log('Recording event:', { user_id, session_id, event_type, page_url });
-
+  console.log('Received /api/track POST:', req.body);
+  const { user_id, session_id, event_type, page_url, event_data } = req.body;
   try {
     await pool.query(
       'INSERT INTO events (user_id, session_id, event_type, page_url, event_data) VALUES ($1, $2, $3, $4, $5)',
@@ -70,7 +68,7 @@ app.post('/api/track', async (req, res) => {
         session_id,
         event_type,
         page_url,
-        typeof event_data === "string" ? event_data : JSON.stringify(event_data || {})
+        typeof event_data === 'string' ? event_data : JSON.stringify(event_data || {})
       ]
     );
     res.sendStatus(204);
@@ -80,6 +78,21 @@ app.post('/api/track', async (req, res) => {
   }
 });
 
+app.post('/api/consent', async (req, res) => {
+  const { user_id, session_id, consent_given, consent_details } = req.body;
+  try {
+    await pool.query(
+      'INSERT INTO consents (user_id, session_id, consent_given, consent_details) VALUES ($1, $2, $3, $4)',
+      [user_id, session_id, consent_given, JSON.stringify(consent_details || {})]
+    );
+    res.sendStatus(204);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error saving consent');
+  }
+});
+
 console.log('***** I AM RUNNING THE RIGHT FILE *****');
 
-app.listen(4000, () => console.log('Analytics API running on port 4000'));
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log('Analytics API running on port', PORT));
