@@ -6,10 +6,20 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Apex-Markets/apex-backend.git"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Apex-Markets/apex-backend/issues"
+  },
+  "homepage": "https://github.com/Apex-Markets/apex-backend#readme",
   "dependencies": {
-    "cookie": "^1.1.1"
+    "cookie": "^1.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
   }
 }

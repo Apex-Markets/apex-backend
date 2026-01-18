@@ -1,1 +1,8 @@
 .vercel
+<<<<<<< HEAD
+=======
+
+# Local Netlify folder
+.netlify
+>>>>>>> 409fe9115e6e67a3ee2706d1b8f465de45a1c0f4
+.DS_Store
