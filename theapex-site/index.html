@@ -1467,19 +1467,43 @@ document.addEventListener("DOMContentLoaded", () => {
 <script>
   // Parse and display cookies for debugging
   document.addEventListener('DOMContentLoaded', function () {
-    // This string: "name1=val1; name2=val2"
     const cookieStr = document.cookie;
-    // Make it prettier for the page
     const div = document.createElement('div');
     div.style.background = '#222';
     div.style.color = '#fff';
     div.style.padding = '10px';
     div.style.margin = '20px';
     div.style.borderRadius = '8px';
-    div.innerHTML = '<b>Cookies set for this site:</b><br>' + 
+    div.innerHTML = '<b>Cookies set for this site:</b><br>' +
       (cookieStr ? cookieStr.replace(/;/g,';<br>') : '(none)');
     document.body.appendChild(div);
   });
+</script>
+
+<script>
+  (function() {
+    // First, visit your backend root to get/set cookies
+    fetch('https://apex-analytics-backend.onrender.com/', { credentials: "include" })
+      .then(() => {
+        // Now cookies are set; extract them to send analytics events
+        function getCookie(name) {
+          let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+          return v ? v[2] : null;
+        }
+        fetch('https://apex-analytics-backend.onrender.com/api/track', {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: getCookie('user_id'),
+            session_id: getCookie('session_id'),
+            event_type: "pageview",
+            page_url: window.location.pathname,
+            event_data: { referrer: document.referrer }
+          })
+        });
+      });
+  })();
 </script>
 </body>
 </html>
