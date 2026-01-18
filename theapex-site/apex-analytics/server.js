@@ -1,3 +1,4 @@
+console.log('REALLY RUNNING NEW CORS CODE', new Date().toISOString());
 console.log('LOADED FROM:', __filename, 'at', new Date().toISOString());
 
 const express = require('express');
@@ -44,22 +45,22 @@ app.get('/', (req, res) => {
   const isProd = process.env.NODE_ENV === 'production';
   const cookieDomain = isProd ? '.theapexinvestor.com' : undefined;
 
-  res.cookie('user_id', userId, {
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-    httpOnly: false,
-    sameSite: 'Lax',
-    path: '/',
-    secure: true,
-    domain: cookieDomain
-  });
-  res.cookie('session_id', sessionId, {
-    maxAge: 2 * 60 * 60 * 1000,
-    httpOnly: false,
-    sameSite: 'Lax',
-    path: '/',
-    secure: true,
-    domain: cookieDomain
-  });
+ res.cookie('user_id', userId, {
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+  httpOnly: false,
+  sameSite: 'None',      // <--- CHANGE THIS
+  path: '/',
+  secure: true,
+  domain: cookieDomain
+});
+res.cookie('session_id', sessionId, {
+  maxAge: 2 * 60 * 60 * 1000,
+  httpOnly: false,
+  sameSite: 'None',      // <--- CHANGE THIS
+  path: '/',
+  secure: true,
+  domain: cookieDomain
+});
 
   console.log('Set cookies: user_id =', userId, ', session_id =', sessionId);
   // Also return as JSON for frontend JS access on first load
