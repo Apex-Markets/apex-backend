@@ -1464,8 +1464,9 @@ document.addEventListener("DOMContentLoaded", () => {
     </script>
 
     <!-- Add this just before </body> -->
+<!-- Parse and display cookies for debugging -->
+<!-- Parse and display cookies for debugging (optional, fine to keep) -->
 <script>
-  // Parse and display cookies for debugging
   document.addEventListener('DOMContentLoaded', function () {
     const cookieStr = document.cookie;
     const div = document.createElement('div');
@@ -1480,33 +1481,43 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 </script>
 
+<!-- 1️⃣ Force user/session cookies to exist -->
+<script>
+  if (!document.cookie.includes("user_id=")) {
+    document.cookie = "user_id=" + Math.random().toString(36).substr(2, 10)
+      + "; path=/; domain=.theapexinvestor.com; SameSite=None; Secure";
+  }
+  if (!document.cookie.includes("session_id=")) {
+    document.cookie = "session_id=" + Math.random().toString(36).substr(2, 12)
+      + "; path=/; domain=.theapexinvestor.com; SameSite=None; Secure";
+  }
+</script>
+
+<!-- 2️⃣ Analytics tracking code -->
 <script>
   (function() {
     console.log("[APEX] Analytics script loaded, sending tracking request...");
-    fetch('https://apex-analytics-backend.onrender.com/', { credentials: "include" })
-      .then(() => {
-        function getCookie(name) {
-          let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-          return v ? v[2] : null;
-        }
-        fetch('https://apex-analytics-backend.onrender.com/api/track', {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            user_id: getCookie('user_id'),
-            session_id: getCookie('session_id'),
-            event_type: "pageview",
-            page_url: window.location.pathname,
-            event_data: { referrer: document.referrer }
-          })
-        }).then(() => {
-          console.log("[APEX] /api/track request sent!");
-        }).catch(err => {
-          console.error("[APEX] /api/track request error:", err);
-        });
-      });
+    function getCookie(name) {
+      let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+      return v ? v[2] : null;
+    }
+    fetch('https://apex-analytics-backend.onrender.com/api/track', {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: getCookie('user_id'),
+        session_id: getCookie('session_id'),
+        event_type: "pageview",
+        page_url: window.location.pathname,
+        event_data: { referrer: document.referrer }
+      })
+    }).then(() => {
+      console.log("[APEX] /api/track request sent!");
+    }).catch(err => {
+      console.error("[APEX] /api/track request error:", err);
+    });
   })();
 </script>
 </body>
-</html> 
+</html>
