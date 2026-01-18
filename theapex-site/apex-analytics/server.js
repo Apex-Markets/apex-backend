@@ -9,7 +9,19 @@ const { Pool } = require('pg');
 const app = express();
 
 app.use(cors({
-  origin: 'https://theapexinvestor.com',
+  origin: function(origin, callback) {
+    console.log("CORS REQ FROM:", origin);
+    const allowed = [
+      'https://theapexinvestor.com',
+      'https://www.theapexinvestor.com'
+    ];
+    if (!origin) return callback(null, true); // allow server-to-server/curl
+    if (allowed.includes(origin)) {
+      callback(null, origin); // ECHO the valid origin!
+    } else {
+      callback(new Error('Origin not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
