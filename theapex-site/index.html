@@ -1482,10 +1482,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <script>
   (function() {
-    // First, visit your backend root to get/set cookies
+    console.log("[APEX] Analytics script loaded, sending tracking request...");
     fetch('https://apex-analytics-backend.onrender.com/', { credentials: "include" })
       .then(() => {
-        // Now cookies are set; extract them to send analytics events
         function getCookie(name) {
           let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
           return v ? v[2] : null;
@@ -1501,9 +1500,13 @@ document.addEventListener("DOMContentLoaded", () => {
             page_url: window.location.pathname,
             event_data: { referrer: document.referrer }
           })
+        }).then(() => {
+          console.log("[APEX] /api/track request sent!");
+        }).catch(err => {
+          console.error("[APEX] /api/track request error:", err);
         });
       });
   })();
 </script>
 </body>
-</html>
+</html> 
