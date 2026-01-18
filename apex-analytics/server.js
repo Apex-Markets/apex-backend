@@ -54,9 +54,14 @@ app.get('/', (req, res) => {
 });
 
 // === ONLY ONE (correct) /api/track endpoint ===
-app.post('/api/track', async (req, res) => {
-  console.log('Received /api/track POST:', req.body);
-  const { user_id, session_id, event_type, page_url, event_data } = req.body;
+aapp.post('/api/track', async (req, res) => {
+  // PREFERRED: use user_id from the cookie
+  const user_id = req.cookies.user_id || req.body.user_id;
+  const session_id = req.cookies.session_id || req.body.session_id;
+  const { event_type, page_url, event_data } = req.body;
+
+  console.log('Recording event:', { user_id, session_id, event_type, page_url });
+
   try {
     await pool.query(
       'INSERT INTO events (user_id, session_id, event_type, page_url, event_data) VALUES ($1, $2, $3, $4, $5)',
