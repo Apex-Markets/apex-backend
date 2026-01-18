@@ -1,27 +1,48 @@
 console.log('LOADED FROM:', __filename, 'at', new Date().toISOString());
 
 const express = require('express');
-const cors = require('cors'); // <--- ADDED
-const bodyParser = require('body-parser'); // <--- ADDED
-const { Pool } = require('pg'); // <--- ADDED
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
+const { Pool } = require('pg');
 
 const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
+app.use(cookieParser());
 
-app.get('/', (req, res) => {
-  console.log('DEBUG: / GET HIT at', new Date().toISOString());
-  res.send('Hello from server!');
-});
-
-// Configure your PostgreSQL connection here
 const pool = new Pool({
   user: 'apex_media_10',
   host: 'localhost',
   database: 'apex_media',
-  password: 'l0GqUC5AAqkbiP1Ol3JtWERc0uil7y3m', // <--- Make sure this is correct!
+  password: 'l0GqUC5AAqkbiP1Ol3JtWERc0uil7y3m', // <--- Use your actual password here
   port: 5432,
+});
+
+app.get('/', (req, res) => {
+  console.log('DEBUG: / GET HIT at', new Date().toISOString());
+
+  // Generate or reuse cookies
+  const userId = req.cookies.user_id || Math.random().toString(36).substring(2, 12);
+  const sessionId = req.cookies.session_id || Math.random().toString(36).substring(2, 14);
+
+  // Set cookies to browser
+  res.cookie('user_id', userId, {
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: false,
+    sameSite: 'Lax',
+    path: '/',
+  });
+  res.cookie('session_id', sessionId, {
+    maxAge: 2 * 60 * 60 * 1000, // 2 hours
+    httpOnly: false,
+    sameSite: 'Lax',
+    path: '/',
+  });
+
+  console.log('Set cookies: user_id =', userId, ', session_id =', sessionId);
+  res.send('Hello from server! (cookies set)');
 });
 
 app.post('/api/track', async (req, res) => {
@@ -52,7 +73,6 @@ app.post('/api/consent', async (req, res) => {
     res.status(500).send('Error saving consent');
   }
 });
-
 
 console.log('***** I AM RUNNING THE RIGHT FILE *****');
 
