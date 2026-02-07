@@ -6,17 +6,18 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [
-      { "source": "/oauth/callback/schwab/**", "function": "schwabOAuthCallback" },
-      { "source": "/firebase-web-authn-api/**", "function": "ext-firebase-web-authn-api" },
-      { "source": "/sign-in", "destination": "/sign-in.html" },
-      { "source": "/sign-up", "destination": "/sign-up.html" },
-      { "source": "/apex-tool", "destination": "/apex-tool.html" },
-      { "source": "/privacy", "destination": "/privacy.html" },
-      { "source": "/terms", "destination": "/terms.html" },
-      { "source": "/what-we-offer", "destination": "/what-we-offer.html" },
-      { "source": "/", "destination": "/index.html" }
-    ]
+   "rewrites": [
+  { "source": "/oauth/callback/schwab/**", "function": "schwabOAuthCallback" },
+  { "source": "/firebase-web-authn-api/**", "function": "ext-firebase-web-authn-api" },
+  { "source": "/sign-in", "destination": "/sign-in.html" },
+  { "source": "/sign-up", "destination": "/sign-up.html" },
+  { "source": "/apex-tool", "destination": "/apex-tool.html" },
+  { "source": "/privacy-policy", "destination": "/privacy-policy.html" },  
+  { "source": "/privacy", "destination": "/privacy.html" },
+  { "source": "/terms", "destination": "/terms.html" },
+  { "source": "/what-we-offer", "destination": "/what-we-offer.html" },
+  { "source": "/", "destination": "/index.html" }
+]
   },
   "functions": { "source": "functions", "runtime": "nodejs18" },
   "emulators": {
