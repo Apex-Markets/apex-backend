@@ -19,7 +19,7 @@
   { "source": "/", "destination": "/index.html" }
 ]
   },
-  "functions": { "source": "functions", "runtime": "nodejs18" },
+"functions": { "source": "functions", "runtime": "nodejs20" },
   "emulators": {
     "functions": { "port": 5004 },
     "hosting": { 

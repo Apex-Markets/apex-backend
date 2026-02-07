@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "the-apex-app"
-  }
+    "default": "the-apex-app",
+    "production": "the-apex-app"
+  },
+  "targets": {},
+  "etags": {}
 }

@@ -1,15 +1,13 @@
 {
   "version": 2,
   "rewrites": [
-<<<<<<< HEAD
-    { "source": "/oauth/callback/schwab", "destination": "/api/oauth-callback-schwab" },
-=======
-{ "source": "/oauth/callback/schwab", "destination": "/api/schwab-test" },
->>>>>>> 409fe9115e6e67a3ee2706d1b8f465de45a1c0f4
+    { "source": "/oauth/callback/schwab", "destination": "/api/schwab-test" },
     { "source": "/sign-in", "destination": "/sign-in.html" },
     { "source": "/sign-up", "destination": "/sign-up.html" },
     { "source": "/apex-tool", "destination": "/apex-tool.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/privacy-policy", "destination": "/privacy-policy.html" },
+    { "source": "/policy-privacy", "destination": "/privacy-policy.html" },  
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/what-we-offer", "destination": "/what-we-offer.html" }
   ]

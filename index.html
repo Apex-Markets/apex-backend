@@ -790,7 +790,7 @@
       <a href="https://theapexinvestor.net/strategies" class="nav-link">Strategies</a>
       <a href="https://theapexinvestor.net/learn" class="nav-link">Learn</a>
       <a href="https://theapexinvestor.net/support" class="nav-link">Support</a>
-    <a href="/privacy.html" class="nav-link">Privacy Policy</a>
+    <a href="/privacy-policy.html" class="nav-link">Privacy Policy</a>
     <a href="/terms.html" class="nav-link">Terms &amp; Conditions</a>
 
  
@@ -1519,5 +1519,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   })();
 </script>
+ HEAD
+=======
+
+<script>
+  (function() {
+    console.log("[APEX] Analytics script loaded, sending tracking request...");
+    fetch('https://apex-analytics-backend.onrender.com/', { credentials: "include" })
+      .then(() => {
+        function getCookie(name) {
+          let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+          return v ? v[2] : null;
+        }
+        fetch('https://apex-analytics-backend.onrender.com/api/track', {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: getCookie('user_id'),
+            session_id: getCookie('session_id'),
+            event_type: "pageview",
+            page_url: window.location.pathname,
+            event_data: { referrer: document.referrer }
+          })
+        }).then(() => {
+          console.log("[APEX] /api/track request sent!");
+        }).catch(err => {
+          console.error("[APEX] /api/track request error:", err);
+        });
+      });
+  })();
+</script>
+ 7bb5a2a1d49b5d25138607589236f36a1729f76d
 </body>
-</html>
+</html> 
